@@ -17,7 +17,7 @@ public static class BcdCodec
     public static string DecodeToString(byte[] data, int offset, int length, int totalDigits = -1, bool isBigEndian = false)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
-        if (offset < 0 || length < 0 || offset + length > data.Length)
+        if (offset < 0 || length <= 0 || offset + length > data.Length)
             throw new ArgumentOutOfRangeException();
 
         StringBuilder result = new StringBuilder();
@@ -44,13 +44,9 @@ public static class BcdCodec
             // В VAG обычно используется 0xF как заполнитель, но иногда 0x0
             if (high != 0xF && high <= 9)
                 result.Append(high);
-            else if (high == 0x0 && i == 0)
-                ; // Пропускаем ведущий 0x0 только если это первый байт
             
             if (low != 0xF && low <= 9)
                 result.Append(low);
-            else if (low == 0x0 && i == length - 1 && result.Length == 0)
-                ; // Сохраняем хотя бы один ноль если все остальные заполнители
         }
         
         // Добавляем ведущие нули если указано totalDigits
@@ -146,7 +142,7 @@ public static class AsciiCodec
     public static string Decode(byte[] data, int offset, int length)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
-        if (offset < 0 || length < 0 || offset + length > data.Length)
+        if (offset < 0 || length <= 0 || offset + length > data.Length)
             throw new ArgumentOutOfRangeException();
 
         string result = Encoding.ASCII.GetString(data, offset, length);

@@ -54,9 +54,14 @@ public class ImmoParserService
         {
             try
             {
-                storedCrc = map.IsBigEndian
-                    ? (ushort)((data[map.CrcOffset] << 8) | data[map.CrcOffset + 1])
-                    : (ushort)((data[map.CrcOffset + 1] << 8) | data[map.CrcOffset]);
+                // Читаем CRC с правильным порядком байт
+                ushort storedCrcValue;
+                if (map.IsBigEndian)
+                    storedCrcValue = (ushort)((data[map.CrcOffset] << 8) | data[map.CrcOffset + 1]);
+                else
+                    storedCrcValue = (ushort)(data[map.CrcOffset] | (data[map.CrcOffset + 1] << 8));
+                
+                storedCrc = storedCrcValue;
                 
                 int crcDataLength = map.CrcOffset;
                 calculatedCrc = map.Type switch

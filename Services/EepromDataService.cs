@@ -41,6 +41,12 @@ public class EepromDataService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _lastError = "Путь к файлу не указан";
+                return new EepromResult(false, _lastError);
+            }
+            
             if (!File.Exists(filePath))
             {
                 _lastError = "Файл не найден";
@@ -58,9 +64,10 @@ public class EepromDataService
 
             byte[] fileData = File.ReadAllBytes(filePath);
             
-            // Копируем данные в буфер
+            // Копируем данные в буфер с защитой от переполнения
             Array.Clear(_data, 0, _data.Length);
-            Buffer.BlockCopy(fileData, 0, _data, 0, fileData.Length);
+            int copyLength = Math.Min(fileData.Length, EepromSize);
+            Buffer.BlockCopy(fileData, 0, _data, 0, copyLength);
             
             // Очищаем историю при загрузке нового файла
             _undoStack.Clear();
@@ -72,7 +79,7 @@ public class EepromDataService
             AutoDetectImmoType();
             var crcValid = ValidateCrc();
             
-            _operationLog.Add($"Загружен файл: {Path.GetFileName(filePath)}, Тип: {_currentMap.Name}, CRC: {(crcValid ? "OK" : "INVALID")}");
+            _operationLog.Add($"Загружен файл: {Path.GetFileName(filePath)}, Размер: {fileInfo.Length} байт, Тип: {_currentMap.Name}, CRC: {(crcValid ? "OK" : "INVALID")}");
 
             return new EepromResult(true, 
                 $"Файл загружен. Тип: {_currentMap.Name}. CRC: {(crcValid ? "OK" : "INVALID")}", 
@@ -99,6 +106,19 @@ public class EepromDataService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _lastError = "Путь к файлу не указан";
+                return new EepromResult(false, _lastError);
+            }
+            
+            // Проверка данных перед сохранением
+            if (_data == null || _data.Length != EepromSize)
+            {
+                _lastError = "Некорректные данные EEPROM";
+                return new EepromResult(false, _lastError);
+            }
+            
             // Пересчет CRC перед сохранением
             RecalculateCrc();
 
@@ -228,9 +248,11 @@ public class EepromDataService
         try
         {
             // Читаем сохраненный CRC
-            ushort storedCrc = _currentMap.IsBigEndian
-                ? (ushort)((_data[_currentMap.CrcOffset] << 8) | _data[_currentMap.CrcOffset + 1])
-                : (ushort)((_data[_currentMap.CrcOffset + 1] << 8) | _data[_currentMap.CrcOffset]);
+            ushort storedCrc;
+            if (_currentMap.IsBigEndian)
+                storedCrc = (ushort)((_data[_currentMap.CrcOffset] << 8) | _data[_currentMap.CrcOffset + 1]);
+            else
+                storedCrc = (ushort)(_data[_currentMap.CrcOffset] | (_data[_currentMap.CrcOffset + 1] << 8));
 
             // Вычисляем CRC для данных до CRC поля
             int crcDataLength = _currentMap.CrcOffset;
@@ -305,38 +327,49 @@ public class EepromDataService
     {
         // Проверяем наличие данных в характерных областях для разных типов
         
-        // VDO: PIN обычно в 0x1E0
+        // VDO: PIN обычно в 0x1E0, пробег в 0x1D0
         bool hasVdoPattern = IsDataPresent(0x1E0, 5) && IsDataPresent(0x1D0, 4);
         
-        // Motorola: PIN обычно в 0x1F0
+        // Motorola: PIN обычно в 0x1F0, пробег в 0x1C0
         bool hasMotorolaPattern = IsDataPresent(0x1F0, 7) && IsDataPresent(0x1C0, 4);
         
-        // NEC: PIN обычно в 0x1E8
+        // NEC: PIN обычно в 0x1E8, пробег в 0x1D8
         bool hasNecPattern = IsDataPresent(0x1E8, 5) && IsDataPresent(0x1D8, 4);
         
-        // IMMO4: данные в области 0x200+
+        // IMMO4: данные в области 0x200+, пробег в 0x1F0
         bool hasKayabaPattern = IsDataPresent(0x200, 7) && IsDataPresent(0x1F0, 4);
 
-        if (hasKayabaPattern && !hasVdoPattern && !hasMotorolaPattern)
-            _currentMap = EepromMap.Maps.IMMO4_KAYABA;
-        else if (hasMotorolaPattern && !hasVdoPattern)
-            _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
-        else if (hasNecPattern && !hasVdoPattern)
-            _currentMap = EepromMap.Maps.IMMO3_NEC;
-        else if (hasVdoPattern)
-            _currentMap = EepromMap.Maps.IMMO3_VDO;
-        else
+        // Подсчитываем количество совпадений для более точного определения
+        int vdoScore = (hasVdoPattern ? 2 : 0) + (IsDataPresent(0x1B0, 17) ? 1 : 0);
+        int motorolaScore = (hasMotorolaPattern ? 2 : 0) + (IsDataPresent(0x1A0, 17) ? 1 : 0);
+        int necScore = (hasNecPattern ? 2 : 0) + (IsDataPresent(0x1B8, 17) ? 1 : 0);
+        int kayabaScore = (hasKayabaPattern ? 2 : 0) + (IsDataPresent(0x1D0, 17) ? 1 : 0);
+
+        // Выбираем тип с наибольшим score
+        int maxScore = Math.Max(Math.Max(vdoScore, motorolaScore), Math.Max(necScore, kayabaScore));
+        
+        if (maxScore == 0)
         {
-            // Если ничего не найдено, используем эвристику по первому байту
+            // Если ничего не найдено, используем эвристику по наличию данных в характерных областях
             if (_data[0x1E0] != 0x00 && _data[0x1E0] != 0xFF)
                 _currentMap = EepromMap.Maps.IMMO3_VDO;
             else if (_data[0x1F0] != 0x00 && _data[0x1F0] != 0xFF)
                 _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
+            else if (_data[0x200] != 0x00 && _data[0x200] != 0xFF)
+                _currentMap = EepromMap.Maps.IMMO4_KAYABA;
             else
                 _currentMap = EepromMap.Maps.IMMO3_VDO; // Default
         }
+        else if (kayabaScore == maxScore && kayabaScore > vdoScore && kayabaScore > motorolaScore)
+            _currentMap = EepromMap.Maps.IMMO4_KAYABA;
+        else if (motorolaScore == maxScore && motorolaScore > vdoScore)
+            _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
+        else if (necScore == maxScore && necScore > vdoScore)
+            _currentMap = EepromMap.Maps.IMMO3_NEC;
+        else
+            _currentMap = EepromMap.Maps.IMMO3_VDO;
         
-        _operationLog.Add($"Автоопределен тип IMMO: {_currentMap.Name}");
+        _operationLog.Add($"Автоопределен тип IMMO: {_currentMap.Name} (score: VDO={vdoScore}, Moto={motorolaScore}, NEC={necScore}, Kayaba={kayabaScore})");
     }
     
     /// <summary>
