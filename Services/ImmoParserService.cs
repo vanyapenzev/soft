@@ -89,7 +89,7 @@ public class ImmoParserService
             CalculatedCrc: calculatedCrc,
             IsCrcValid: isCrcValid,
             Options: options,
-            Keys: keys
+            Keys: keys.Count > 0 ? keys : null
         );
     }
 
