@@ -12,7 +12,8 @@ public record ImmoData(
     ushort? StoredCrc,
     ushort? CalculatedCrc,
     bool IsCrcValid,
-    List<ImmoOption> Options
+    List<ImmoOption> Options,
+    List<KeyInfo>? Keys = null
 );
 
 public record ImmoOption(
@@ -35,4 +36,11 @@ public record ChangeRecord(
     byte OldValue,
     byte NewValue,
     DateTime Timestamp
+);
+
+public record KeyInfo(
+    int Index,
+    string KeyId,
+    bool IsLearned,
+    string TransponderType
 );
