@@ -1,6 +1,7 @@
 namespace App.Core;
 
 using App.Models;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для загрузки и валидации бинарных дампов EEPROM

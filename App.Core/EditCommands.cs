@@ -1,6 +1,7 @@
 namespace App.Core;
 
 using App.Models;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для безопасного редактирования дампа EEPROM

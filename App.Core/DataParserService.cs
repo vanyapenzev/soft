@@ -1,6 +1,7 @@
 namespace App.Core;
 
 using App.Models;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для парсинга данных из дампа EEPROM
