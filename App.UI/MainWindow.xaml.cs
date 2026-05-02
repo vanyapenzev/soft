@@ -4,7 +4,6 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using Microsoft.Win32;
-using Microsoft.Extensions.Logging;
 using App.Core;
 using App.Models;
 using App.Crypto;

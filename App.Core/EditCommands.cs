@@ -1,7 +1,6 @@
 namespace App.Core;
 
 using App.Models;
-using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для безопасного редактирования дампа EEPROM
@@ -259,11 +258,8 @@ public interface ICrcCalculator
 /// </summary>
 public class VdoCrcCalculator : ICrcCalculator
 {
-    private readonly ILogger<VdoCrcCalculator>? _logger;
-
-    public VdoCrcCalculator(ILogger<VdoCrcCalculator>? logger = null)
+    public VdoCrcCalculator()
     {
-        _logger = logger;
     }
 
     /// <summary>
@@ -351,12 +347,10 @@ public class VdoCrcCalculator : ICrcCalculator
 public class EditCommandService
 {
     private readonly ICrcCalculator _crcCalculator;
-    private readonly ILogger<EditCommandService>? _logger;
 
-    public EditCommandService(ICrcCalculator crcCalculator, ILogger<EditCommandService>? logger = null)
+    public EditCommandService(ICrcCalculator crcCalculator)
     {
         _crcCalculator = crcCalculator;
-        _logger = logger;
     }
 
     /// <summary>

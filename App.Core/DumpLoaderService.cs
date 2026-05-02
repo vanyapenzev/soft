@@ -1,18 +1,14 @@
 namespace App.Core;
 
 using App.Models;
-using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для загрузки и валидации бинарных дампов EEPROM
 /// </summary>
 public class DumpLoaderService
 {
-    private readonly ILogger<DumpLoaderService>? _logger;
-
-    public DumpLoaderService(ILogger<DumpLoaderService>? logger = null)
+    public DumpLoaderService()
     {
-        _logger = logger;
     }
 
     /// <summary>
