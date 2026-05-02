@@ -79,30 +79,12 @@ public static class CrcCalculator
             for (int j = 0; j < 8; j++)
             {
                 if ((crc & 0x01) != 0)
-                    crc = (byte)((crc >> 1) ^ 0x8C); // 0x8C = reverse(0x0D)
+                    crc = (byte)((crc >> 1) ^ 0x8C);
                 else
                     crc = (byte)(crc >> 1);
             }
         }
         
         return crc;
-    }
-
-    /// <summary>
-    /// Проверка CRC для блока данных
-    /// </summary>
-    public static bool VerifyCrc16Ccitt(byte[] data, int offset, int length, ushort expectedCrc)
-    {
-        ushort calculated = CalculateCrc16Ccitt(data, offset, length);
-        return calculated == expectedCrc;
-    }
-
-    /// <summary>
-    /// Проверка CRC для Motorola
-    /// </summary>
-    public static bool VerifyCrc16Motorola(byte[] data, int offset, int length, ushort expectedCrc)
-    {
-        ushort calculated = CalculateCrc16Motorola(data, offset, length);
-        return calculated == expectedCrc;
     }
 }

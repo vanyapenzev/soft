@@ -6,9 +6,6 @@ using VagImmoEditor.Data.Models;
 
 namespace VagImmoEditor.Services;
 
-/// <summary>
-/// Сервис парсинга данных иммобилайзера из EEPROM
-/// </summary>
 public class ImmoParserService
 {
     private readonly EepromDataService _eepromService;
@@ -18,28 +15,19 @@ public class ImmoParserService
         _eepromService = eepromService ?? throw new ArgumentNullException(nameof(eepromService));
     }
 
-    /// <summary>
-    /// Парсинг всех данных иммобилайзера
-    /// </summary>
     public ImmoData ParseImmoData()
     {
         var map = _eepromService.CurrentMap;
         byte[] data = _eepromService.GetDataCopy();
 
-        // Парсим PIN
         string pin = ParsePin(data, map);
-
-        // Парсим пробег
         uint mileage = ParseMileage(data, map);
-
-        // Парсим VIN
         string vin = ParseVin(data, map);
 
-        // Получаем CRC
         ushort? storedCrc = null;
         ushort? calculatedCrc = null;
         
-        if (map.CrcOffset >= 0)
+        if (map.CrcOffset >= 0 && map.CrcOffset + 2 <= data.Length)
         {
             storedCrc = map.IsBigEndian
                 ? (ushort)((data[map.CrcOffset] << 8) | data[map.CrcOffset + 1])
@@ -55,8 +43,6 @@ public class ImmoParserService
         }
 
         bool isCrcValid = storedCrc == calculatedCrc;
-
-        // Парсим опции
         List<ImmoOption> options = ParseOptions(data, map);
 
         return new ImmoData(
@@ -71,20 +57,15 @@ public class ImmoParserService
         );
     }
 
-    /// <summary>
-    /// Парсинг PIN кода
-    /// </summary>
     private string ParsePin(byte[] data, EepromMap map)
     {
         try
         {
-            // Для IMMO2 используем ASCII, для остальных BCD
             if (map.Type == ImmoType.IMMO2)
             {
                 return AsciiCodec.Decode(data, map.PinOffset, map.PinLength);
             }
             
-            // BCD декодирование с сохранением ведущих нулей
             int totalDigits = map.PinLength * 2;
             return BcdCodec.DecodeToString(data, map.PinOffset, map.PinLength, totalDigits);
         }
@@ -94,38 +75,17 @@ public class ImmoParserService
         }
     }
 
-    /// <summary>
-    /// Парсинг пробега
-    /// </summary>
     private uint ParseMileage(byte[] data, EepromMap map)
     {
         try
         {
-            uint rawValue;
-            
-            if (map.IsBigEndian)
-            {
-                rawValue = (uint)((data[map.MileageOffset] << 24) |
-                                  (data[map.MileageOffset + 1] << 16) |
-                                  (data[map.MileageOffset + 2] << 8) |
-                                  data[map.MileageOffset + 3]);
-            }
-            else
-            {
-                rawValue = (uint)(data[map.MileageOffset] |
-                                  (data[map.MileageOffset + 1] << 8) |
-                                  (data[map.MileageOffset + 2] << 16) |
-                                  (data[map.MileageOffset + 3] << 24));
-            }
-
-            // BCD декодирование
             string bcdStr = BcdCodec.DecodeToString(data, map.MileageOffset, map.MileageLength);
             if (uint.TryParse(bcdStr, out uint bcdValue))
             {
                 return bcdValue * (uint)map.MileageMultiplier;
             }
 
-            return rawValue * (uint)map.MileageMultiplier;
+            return 0;
         }
         catch
         {
@@ -133,9 +93,6 @@ public class ImmoParserService
         }
     }
 
-    /// <summary>
-    /// Парсинг VIN номера
-    /// </summary>
     private string ParseVin(byte[] data, EepromMap map)
     {
         try
@@ -148,14 +105,10 @@ public class ImmoParserService
         }
     }
 
-    /// <summary>
-    /// Парсинг опций иммобилайзера
-    /// </summary>
     private List<ImmoOption> ParseOptions(byte[] data, EepromMap map)
     {
         var options = new List<ImmoOption>();
 
-        // Определяем смещение байта опций в зависимости от типа
         int optionsOffset = map.Type switch
         {
             ImmoType.IMMO3_VDO => 0x1F8,
@@ -170,7 +123,6 @@ public class ImmoParserService
 
         byte optionsByte = data[optionsOffset];
 
-        // Component Protection (бит 0)
         options.Add(new ImmoOption(
             Name: "Component Protection",
             Description: "Защита компонентов (транспондер)",
@@ -179,7 +131,6 @@ public class ImmoParserService
             Value: (optionsByte & 0x01) != 0
         ));
 
-        // Learning Mode (бит 1)
         options.Add(new ImmoOption(
             Name: "Learning Mode",
             Description: "Режим обучения ключей",
@@ -188,7 +139,6 @@ public class ImmoParserService
             Value: (optionsByte & 0x02) != 0
         ));
 
-        // Immobilizer Active (бит 2)
         options.Add(new ImmoOption(
             Name: "Immobilizer Active",
             Description: "Иммобилайзер активен",
@@ -197,7 +147,6 @@ public class ImmoParserService
             Value: (optionsByte & 0x04) != 0
         ));
 
-        // Key Count (биты 4-5)
         int keyCount = (optionsByte >> 4) & 0x03;
         options.Add(new ImmoOption(
             Name: "Key Count",
@@ -207,7 +156,6 @@ public class ImmoParserService
             Value: keyCount > 0
         ));
 
-        // Country Code (биты 6-7)
         int countryCode = (optionsByte >> 6) & 0x03;
         string countryStr = countryCode switch
         {
@@ -228,9 +176,6 @@ public class ImmoParserService
         return options;
     }
 
-    /// <summary>
-    /// Обновление PIN кода
-    /// </summary>
     public bool UpdatePin(string newPin)
     {
         try
@@ -253,21 +198,16 @@ public class ImmoParserService
         }
     }
 
-    /// <summary>
-    /// Обновление пробега
-    /// </summary>
     public bool UpdateMileage(uint newMileage)
     {
         try
         {
             var map = _eepromService.CurrentMap;
             
-            // Делим на множитель для получения значения для записи
             uint valueToWrite = newMileage / (uint)map.MileageMultiplier;
             
             byte[] encoded = Core.Codecs.BcdCodec.Encode(valueToWrite, map.MileageLength);
             
-            // Учитываем порядок байт
             if (map.IsBigEndian)
             {
                 Array.Reverse(encoded);
@@ -282,9 +222,6 @@ public class ImmoParserService
         }
     }
 
-    /// <summary>
-    /// Обновление VIN
-    /// </summary>
     public bool UpdateVin(string newVin)
     {
         try
@@ -304,9 +241,6 @@ public class ImmoParserService
         }
     }
 
-    /// <summary>
-    /// Переключение опции
-    /// </summary>
     public bool ToggleOption(ImmoOption option, bool newValue)
     {
         try
@@ -316,7 +250,6 @@ public class ImmoParserService
 
             if (option.BitIndex >= 4)
             {
-                // Для многобитовых опций (Key Count, Country Code)
                 int mask = option.BitIndex == 4 ? 0x30 : 0xC0;
                 int shift = option.BitIndex;
                 int bitValue = newValue ? 1 : 0;
@@ -325,7 +258,6 @@ public class ImmoParserService
             }
             else
             {
-                // Для одиночных битов
                 if (newValue)
                     newValueByte = (byte)(currentValue | option.Mask);
                 else

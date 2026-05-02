@@ -12,10 +12,6 @@ public static class BcdCodec
     /// <summary>
     /// Декодирование BCD в строку с сохранением ведущих нулей
     /// </summary>
-    /// <param name="data">Массив байтов с BCD данными</param>
-    /// <param name="offset">Смещение начала данных</param>
-    /// <param name="length">Длина в байтах</param>
-    /// <param name="totalDigits">Общее количество цифр (для padding)</param>
     public static string DecodeToString(byte[] data, int offset, int length, int totalDigits = -1)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
@@ -59,8 +55,6 @@ public static class BcdCodec
     /// <summary>
     /// Кодирование строки в BCD
     /// </summary>
-    /// <param name="value">Строка с цифрами</param>
-    /// <param name="byteLength">Желаемая длина в байтах</param>
     public static byte[] Encode(string value, int byteLength)
     {
         if (string.IsNullOrEmpty(value))

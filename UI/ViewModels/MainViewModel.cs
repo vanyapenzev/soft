@@ -1,13 +1,11 @@
 using System;
-using System.IO;
+using System.Collections.ObjectModel;
 using System.Windows;
 using Microsoft.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using System.Collections.ObjectModel;
 using VagImmoEditor.Services;
 using VagImmoEditor.Data.Models;
-using VagImmoEditor.Data.Maps;
 
 namespace VagImmoEditor.UI.ViewModels;
 
@@ -179,7 +177,6 @@ public partial class MainViewModel : ObservableObject
             
             CrcStatus = immoData.IsCrcValid ? "VALID ✓" : "INVALID ✗";
 
-            // Обновляем опции
             Options.Clear();
             foreach (var opt in immoData.Options)
             {
@@ -193,9 +190,6 @@ public partial class MainViewModel : ObservableObject
     }
 }
 
-/// <summary>
-/// Обертка для опции в UI
-/// </summary>
 public partial class ImmoOptionItem : ObservableObject
 {
     public ImmoOption? Option { get; }

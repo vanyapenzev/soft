@@ -8,17 +8,16 @@ namespace VagImmoEditor.Data.Maps;
 public enum ImmoType
 {
     Unknown = 0,
-    IMMO2 = 1,           // Ранние системы (до 1998)
-    IMMO3_VDO = 2,       // VDO Siemens (1998-2003)
-    IMMO3_Motorola = 3,  // Motorola (1998-2003)
-    IMMO3_NEC = 4,       // NEC (1998-2003)
-    IMMO4_Kayaba = 5,    // Kayaba (2003+)
-    IMMO4_Denso = 6      // Denso (2003+)
+    IMMO2 = 1,
+    IMMO3_VDO = 2,
+    IMMO3_Motorola = 3,
+    IMMO3_NEC = 4,
+    IMMO4_Kayaba = 5,
+    IMMO4_Denso = 6
 }
 
 /// <summary>
 /// Карта памяти EEPROM для различных типов комбинаций приборов VAG
-/// Содержит точные смещения для PIN, пробега, VIN и других данных
 /// </summary>
 public record EepromMap(
     ImmoType Type,
@@ -37,16 +36,8 @@ public record EepromMap(
     int MileageMultiplier = 10
 )
 {
-    /// <summary>
-    /// Карты памяти для различных типов комбинаций приборов VAG
-    /// Основано на реальных дампах и документации
-    /// </summary>
     public static class Maps
     {
-        /// <summary>
-        /// IMMO3 VDO/Siemens (Audi A4/A6, VW Passat B5, Golf IV)
-        /// PIN: 5 знаков BCD, Пробег: BCD x10, CRC16 CCITT
-        /// </summary>
         public static readonly EepromMap IMMO3_VDO = new(
             Type: ImmoType.IMMO3_VDO,
             Name: "IMMO3 VDO/Siemens",
@@ -62,10 +53,6 @@ public record EepromMap(
             MileageMultiplier: 10
         );
 
-        /// <summary>
-        /// IMMO3 Motorola (VW Golf IV, Seat, Skoda)
-        /// PIN: 7 знаков BCD, Пробег: BCD x10, CRC16 Motorola
-        /// </summary>
         public static readonly EepromMap IMMO3_MOTOROLA = new(
             Type: ImmoType.IMMO3_Motorola,
             Name: "IMMO3 Motorola",
@@ -81,10 +68,6 @@ public record EepromMap(
             MileageMultiplier: 10
         );
 
-        /// <summary>
-        /// IMMO3 NEC (некоторые модели Audi, VW)
-        /// PIN: 5 знаков BCD, Пробег: BCD x10
-        /// </summary>
         public static readonly EepromMap IMMO3_NEC = new(
             Type: ImmoType.IMMO3_NEC,
             Name: "IMMO3 NEC",
@@ -100,10 +83,6 @@ public record EepromMap(
             MileageMultiplier: 10
         );
 
-        /// <summary>
-        /// IMMO2 (ранние системы до 1998 года)
-        /// PIN: 4 знака ASCII, Пробег: BCD x10
-        /// </summary>
         public static readonly EepromMap IMMO2 = new(
             Type: ImmoType.IMMO2,
             Name: "IMMO2 (Early)",
@@ -113,16 +92,12 @@ public record EepromMap(
             MileageLength: 3,
             VinOffset: 0x0C0,
             VinLength: 17,
-            CrcOffset: -1, // Нет CRC
+            CrcOffset: -1,
             CrcLength: 0,
             IsBigEndian: false,
             MileageMultiplier: 10
         );
 
-        /// <summary>
-        /// IMMO4 Kayaba (Audi A8, VW Touareg, Porsche Cayenne)
-        /// Использует шифрование и FAZIT
-        /// </summary>
         public static readonly EepromMap IMMO4_KAYABA = new(
             Type: ImmoType.IMMO4_Kayaba,
             Name: "IMMO4 Kayaba",
@@ -140,9 +115,6 @@ public record EepromMap(
             MileageMultiplier: 1
         );
 
-        /// <summary>
-        /// Получение всех доступных карт
-        /// </summary>
         public static EepromMap[] AllMaps => new[]
         {
             IMMO2,
