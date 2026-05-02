@@ -1,4 +1,6 @@
 using System.Windows;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using VagImmoEditor.Models;
 using VagImmoEditor.Parsers;
 using VagImmoEditor.Services;
@@ -8,68 +10,43 @@ namespace VagImmoEditor.ViewModels;
 /// <summary>
 /// Главная ViewModel приложения с поддержкой Undo/Redo
 /// </summary>
-public class MainViewModel : CommunityToolkit.Mvvm.ObservableObject
+public partial class MainViewModel : ObservableObject
 {
-    private EepromData? _eepromData;
+    [ObservableProperty]
+    private string _statusMessage = "Готов к работе";
+
+    [ObservableProperty]
+    private string _fileName = "Нет файла";
+
+    [ObservableProperty]
+    private bool _isFileLoaded;
+
+    [ObservableProperty]
+    private bool _canUndo;
+
+    [ObservableProperty]
+    private bool _canRedo;
+
+    [ObservableProperty]
     private ImmoData? _immoData;
+
+    private EepromData? _eepromData;
     private VagEepromParser? _parser;
     private ImmoOptionsService? _optionsService;
     private ChangeHistoryService? _historyService;
     
-    private string _statusMessage = "Готов к работе";
-    private string _fileName = "Нет файла";
-    private bool _isFileLoaded;
-    private bool _canUndo;
-    private bool _canRedo;
-    
     public MainViewModel()
     {
-        LoadFileCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(LoadFile);
-        SaveFileCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(SaveFile, CanSaveFile);
-        ExitCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(ExitApplication);
-        RefreshDataCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(RefreshData, CanRefreshData);
-        ApplyOptionCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<ImmoOption>(ApplyOption, CanApplyOption);
-        UndoCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(Undo, () => _canUndo);
-        RedoCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(Redo, () => _canRedo);
+        LoadFileCommand = new RelayCommand(LoadFile);
+        SaveFileCommand = new RelayCommand(SaveFile, CanSaveFile);
+        ExitCommand = new RelayCommand(ExitApplication);
+        RefreshDataCommand = new RelayCommand(RefreshData, CanRefreshData);
+        ApplyOptionCommand = new RelayCommand<ImmoOption?>(ApplyOption, CanApplyOption);
+        UndoCommand = new RelayCommand(Undo, () => _canUndo);
+        RedoCommand = new RelayCommand(Redo, () => _canRedo);
     }
     
     #region Properties
-    
-    public string StatusMessage
-    {
-        get => _statusMessage;
-        set => SetProperty(ref _statusMessage, value);
-    }
-    
-    public string FileName
-    {
-        get => _fileName;
-        set => SetProperty(ref _fileName, value);
-    }
-    
-    public bool IsFileLoaded
-    {
-        get => _isFileLoaded;
-        set => SetProperty(ref _isFileLoaded, value);
-    }
-    
-    public bool CanUndo
-    {
-        get => _canUndo;
-        set => SetProperty(ref _canUndo, value);
-    }
-    
-    public bool CanRedo
-    {
-        get => _canRedo;
-        set => SetProperty(ref _canRedo, value);
-    }
-    
-    public ImmoData? ImmoData
-    {
-        get => _immoData;
-        set => SetProperty(ref _immoData, value);
-    }
     
     public string PinCode => ImmoData?.PinCode ?? "N/A";
     public int Mileage => ImmoData?.Mileage ?? 0;
@@ -84,13 +61,13 @@ public class MainViewModel : CommunityToolkit.Mvvm.ObservableObject
     
     #region Commands
     
-    public CommunityToolkit.Mvvm.Input.IRelayCommand LoadFileCommand { get; }
-    public CommunityToolkit.Mvvm.Input.IRelayCommand SaveFileCommand { get; }
-    public CommunityToolkit.Mvvm.Input.IRelayCommand ExitCommand { get; }
-    public CommunityToolkit.Mvvm.Input.IRelayCommand RefreshDataCommand { get; }
-    public CommunityToolkit.Mvvm.Input.IRelayCommand<ImmoOption?> ApplyOptionCommand { get; }
-    public CommunityToolkit.Mvvm.Input.IRelayCommand UndoCommand { get; }
-    public CommunityToolkit.Mvvm.Input.IRelayCommand RedoCommand { get; }
+    public IRelayCommand LoadFileCommand { get; }
+    public IRelayCommand SaveFileCommand { get; }
+    public IRelayCommand ExitCommand { get; }
+    public IRelayCommand RefreshDataCommand { get; }
+    public IRelayCommand<ImmoOption?> ApplyOptionCommand { get; }
+    public IRelayCommand UndoCommand { get; }
+    public IRelayCommand RedoCommand { get; }
     
     #endregion
     
@@ -300,8 +277,8 @@ public class MainViewModel : CommunityToolkit.Mvvm.ObservableObject
             CanRedo = _historyService.CanRedo;
             
             // Обновляем команды
-            ((CommunityToolkit.Mvvm.Input.RelayCommand)UndoCommand).NotifyCanExecuteChanged();
-            ((CommunityToolkit.Mvvm.Input.RelayCommand)RedoCommand).NotifyCanExecuteChanged();
+            ((RelayCommand)UndoCommand).NotifyCanExecuteChanged();
+            ((RelayCommand)RedoCommand).NotifyCanExecuteChanged();
         }
     }
     
