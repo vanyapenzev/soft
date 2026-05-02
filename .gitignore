@@ -1,23 +1,43 @@
 ```
-# Build results
+# Build artifacts
 bin/
 obj/
-out/
-
-# User-specific files
-.vs/
-.userprefs
-
-# IDE - VS Code
-.vscode/
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.snupkg
 
 # Dependencies
 packages/
+node_modules/
+vendor/
 
 # Logs
 *.log
 
-# OS generated files
+# Environment
+.env
+.env.local
+.env.*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
 Thumbs.db
+
+# Test and coverage
+coverage/
+htmlcov/
+*.coverage
+.testcoverage
+
+# Temporary files
+*.tmp
+*.temp
 ```
