@@ -93,7 +93,7 @@ public partial class MainViewModel : ObservableObject
                 // Подписка на события истории
                 _historyService.HistoryChanged += OnHistoryChanged;
                 
-                _immoData = _parser.Parse();
+                ImmoData = _parser.Parse();
                 
                 FileName = System.IO.Path.GetFileName(dialog.FileName);
                 IsFileLoaded = true;
@@ -160,7 +160,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (_parser == null || _eepromData == null) return;
         
-        _immoData = _parser.Parse();
+        ImmoData = _parser.Parse();
         
         OnPropertyChanged(nameof(PinCode));
         OnPropertyChanged(nameof(Mileage));
