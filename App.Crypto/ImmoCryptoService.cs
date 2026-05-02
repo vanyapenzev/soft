@@ -1,6 +1,7 @@
 namespace App.Crypto;
 
 using App.Models;
+using App.Core;
 using Microsoft.Extensions.Logging;
 
 /// <summary>

@@ -1,20 +1,12 @@
 ```
-# Build artifacts
-bin/
-obj/
-*.dll
-*.exe
-*.pdb
-*.nupkg
-*.snupkg
-
 # Dependencies
 packages/
-node_modules/
-vendor/
+bin/
+obj/
 
-# Logs
+# Logs and temp files
 *.log
+*.tmp
 
 # Environment
 .env
@@ -24,10 +16,6 @@ vendor/
 # Editors
 .vscode/
 .idea/
-*.suo
-*.user
-*.userosscache
-*.sln.docstates
 
 # OS generated files
 .DS_Store
