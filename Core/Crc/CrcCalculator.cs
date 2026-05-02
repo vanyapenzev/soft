@@ -11,11 +11,11 @@ public static class CrcCalculator
     /// CRC-16/CCITT (XModem) - используется в VDO
     /// Poly: 0x1021, Init: 0x0000, RefIn: false, RefOut: false, XorOut: 0x0000
     /// </summary>
-    public static ushort CalculateCrc16Ccitt(byte[] data, int offset, int length)
+    public static ushort? CalculateCrc16Ccitt(byte[] data, int offset, int length)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         if (offset < 0 || length < 0 || offset + length > data.Length)
-            throw new ArgumentOutOfRangeException();
+            return null;
 
         ushort crc = 0x0000;
         
@@ -38,11 +38,11 @@ public static class CrcCalculator
     /// CRC-16/Motorola (IBM) - используется в Motorola IMMO
     /// Poly: 0x8005, Init: 0x0000, RefIn: false, RefOut: false, XorOut: 0x0000
     /// </summary>
-    public static ushort CalculateCrc16Motorola(byte[] data, int offset, int length)
+    public static ushort? CalculateCrc16Motorola(byte[] data, int offset, int length)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         if (offset < 0 || length < 0 || offset + length > data.Length)
-            throw new ArgumentOutOfRangeException();
+            return null;
 
         ushort crc = 0x0000;
         
@@ -65,11 +65,11 @@ public static class CrcCalculator
     /// CRC-8 для некоторых блоков VAG
     /// Poly: 0x0D, Init: 0x00
     /// </summary>
-    public static byte CalculateCrc8(byte[] data, int offset, int length)
+    public static byte? CalculateCrc8(byte[] data, int offset, int length)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         if (offset < 0 || length < 0 || offset + length > data.Length)
-            throw new ArgumentOutOfRangeException();
+            return null;
 
         byte crc = 0x00;
         

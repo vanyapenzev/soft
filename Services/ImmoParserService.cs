@@ -44,7 +44,7 @@ public class ImmoParserService
         string vin = ParseVin(data, map);
         
         // Парсим ключи
-        List<KeyInfo> keys = ParseKeys(data, map);
+        List<KeyInfo>? keys = ParseKeys(data, map);
         
         // Проверяем CRC
         ushort? storedCrc = null;
@@ -64,12 +64,14 @@ public class ImmoParserService
                 storedCrc = storedCrcValue;
                 
                 int crcDataLength = map.CrcOffset;
-                calculatedCrc = map.Type switch
+                ushort? calculatedCrcValue = map.Type switch
                 {
                     ImmoType.IMMO3_Motorola or ImmoType.IMMO4_Kayaba 
                         => Core.Crc.CrcCalculator.CalculateCrc16Motorola(data, 0, crcDataLength),
                     _ => Core.Crc.CrcCalculator.CalculateCrc16Ccitt(data, 0, crcDataLength)
                 };
+                
+                calculatedCrc = calculatedCrcValue;
             }
             catch
             {
@@ -89,7 +91,7 @@ public class ImmoParserService
             CalculatedCrc: calculatedCrc,
             IsCrcValid: isCrcValid,
             Options: options,
-            Keys: keys.Count > 0 ? keys : null
+            Keys: keys
         );
     }
 
@@ -256,7 +258,7 @@ public class ImmoParserService
     /// <summary>
     /// Парсинг информации о ключах
     /// </summary>
-    private List<KeyInfo> ParseKeys(byte[] data, EepromMap map)
+    private List<KeyInfo>? ParseKeys(byte[] data, EepromMap map)
     {
         var keys = new List<KeyInfo>();
         
@@ -272,7 +274,7 @@ public class ImmoParserService
         };
         
         if (keyDataOffset + 16 > data.Length)
-            return keys;
+            return null;
         
         // Читаем до 4 ключей (каждый ключ занимает 4 байта)
         for (int i = 0; i < 4; i++)
@@ -299,7 +301,7 @@ public class ImmoParserService
             }
         }
         
-        return keys;
+        return keys.Count > 0 ? keys : null;
     }
     
     /// <summary>
@@ -472,7 +474,12 @@ public class ImmoParserService
     {
         try
         {
-            byte currentValue = _eepromService.ReadByte(option.Offset);
+            byte? currentValueNullable = _eepromService.ReadByte(option.Offset);
+            
+            if (!currentValueNullable.HasValue)
+                return false;
+                
+            byte currentValue = currentValueNullable.Value;
             byte newValueByte;
 
             if (option.BitIndex >= 4 && option.Mask > 0x0F)
@@ -497,8 +504,7 @@ public class ImmoParserService
                     newValueByte = (byte)(currentValue & ~option.Mask);
             }
 
-            _eepromService.WriteByte(option.Offset, newValueByte);
-            return true;
+            return _eepromService.WriteByte(option.Offset, newValueByte);
         }
         catch (Exception ex)
         {

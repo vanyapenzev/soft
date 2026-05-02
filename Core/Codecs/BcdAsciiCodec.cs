@@ -18,7 +18,7 @@ public static class BcdCodec
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         if (offset < 0 || length <= 0 || offset + length > data.Length)
-            throw new ArgumentOutOfRangeException();
+            return string.Empty;
 
         StringBuilder result = new StringBuilder();
         
@@ -80,10 +80,13 @@ public static class BcdCodec
     public static byte[] Encode(string value, int byteLength, bool isBigEndian = false)
     {
         if (string.IsNullOrEmpty(value))
-            throw new ArgumentException("Value cannot be null or empty", nameof(value));
+            return Array.Empty<byte>();
         
         // Удаляем нецифровые символы
         string digits = new string(Array.FindAll(value.ToCharArray(), char.IsDigit));
+        
+        if (digits.Length == 0)
+            return Array.Empty<byte>();
         
         byte[] result = new byte[byteLength];
         Array.Fill<byte>(result, 0xFF); // Заполняем 0xFF как padding
@@ -143,7 +146,7 @@ public static class AsciiCodec
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
         if (offset < 0 || length <= 0 || offset + length > data.Length)
-            throw new ArgumentOutOfRangeException();
+            return string.Empty;
 
         string result = Encoding.ASCII.GetString(data, offset, length);
         
@@ -161,7 +164,7 @@ public static class AsciiCodec
     public static byte[] Encode(string value, int length)
     {
         if (string.IsNullOrEmpty(value))
-            throw new ArgumentException("Value cannot be null or empty", nameof(value));
+            return Array.Empty<byte>();
         
         byte[] result = new byte[length];
         Array.Fill<byte>(result, 0x00); // Заполняем нулями

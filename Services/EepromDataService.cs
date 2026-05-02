@@ -145,10 +145,10 @@ public class EepromDataService
     /// <summary>
     /// Чтение байта по смещению с проверкой границ
     /// </summary>
-    public byte ReadByte(int offset)
+    public byte? ReadByte(int offset)
     {
         if (offset < 0 || offset >= _data.Length)
-            throw new ArgumentOutOfRangeException(nameof(offset), $"Смещение {offset} вне диапазона [0, {_data.Length - 1}]");
+            return null;
         
         return _data[offset];
     }
@@ -156,29 +156,32 @@ public class EepromDataService
     /// <summary>
     /// Запись байта с сохранением в историю для Undo
     /// </summary>
-    public void WriteByte(int offset, byte value)
+    public bool WriteByte(int offset, byte value)
     {
         if (offset < 0 || offset >= _data.Length)
-            throw new ArgumentOutOfRangeException(nameof(offset));
+            return false;
 
         byte oldValue = _data[offset];
-        if (oldValue == value) return;
+        if (oldValue == value) return true;
 
         _data[offset] = value;
         _undoStack.Push(new ChangeRecord(offset, oldValue, value, DateTime.Now));
         _redoStack.Clear();
         _isDirty = true;
+        
+        return true;
     }
 
     /// <summary>
     /// Запись диапазона байтов
     /// </summary>
-    public void WriteRange(int offset, byte[] data)
+    public bool WriteRange(int offset, byte[] data)
     {
-        if (data == null) throw new ArgumentNullException(nameof(data));
+        if (data == null) return false;
         if (offset < 0 || offset + data.Length > _data.Length)
-            throw new ArgumentOutOfRangeException(nameof(offset), $"Диапазон [{offset}, {offset + data.Length}) вне границ EEPROM");
+            return false;
 
+        bool hasChanges = false;
         for (int i = 0; i < data.Length; i++)
         {
             byte oldValue = _data[offset + i];
@@ -186,12 +189,17 @@ public class EepromDataService
             {
                 _undoStack.Push(new ChangeRecord(offset + i, oldValue, data[i], DateTime.Now));
                 _data[offset + i] = data[i];
+                hasChanges = true;
             }
         }
         
-        if (_undoStack.Count > 0)
+        if (hasChanges)
+        {
             _redoStack.Clear();
-        _isDirty = true;
+            _isDirty = true;
+        }
+        
+        return true;
     }
 
     /// <summary>
@@ -256,7 +264,7 @@ public class EepromDataService
 
             // Вычисляем CRC для данных до CRC поля
             int crcDataLength = _currentMap.CrcOffset;
-            ushort calculatedCrc;
+            ushort? calculatedCrc;
 
             switch (_currentMap.Type)
             {
@@ -269,7 +277,7 @@ public class EepromDataService
                     break;
             }
 
-            return storedCrc == calculatedCrc;
+            return calculatedCrc.HasValue && storedCrc == calculatedCrc.Value;
         }
         catch (Exception ex)
         {
@@ -292,18 +300,26 @@ public class EepromDataService
         }
 
         int crcDataLength = _currentMap.CrcOffset;
-        ushort newCrc;
+        ushort? newCrcNullable;
 
         switch (_currentMap.Type)
         {
             case ImmoType.IMMO3_Motorola:
             case ImmoType.IMMO4_Kayaba:
-                newCrc = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
+                newCrcNullable = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
                 break;
             default:
-                newCrc = CrcCalculator.CalculateCrc16Ccitt(_data, 0, crcDataLength);
+                newCrcNullable = CrcCalculator.CalculateCrc16Ccitt(_data, 0, crcDataLength);
                 break;
         }
+
+        if (!newCrcNullable.HasValue)
+        {
+            _lastError = "Не удалось вычислить CRC";
+            return;
+        }
+
+        ushort newCrc = newCrcNullable.Value;
 
         // Записываем CRC в правильном порядке байт
         if (_currentMap.IsBigEndian)
