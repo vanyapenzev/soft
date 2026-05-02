@@ -1,5 +1,6 @@
 namespace App.Crypto;
 
+using System.Text;
 using App.Models;
 using App.Core;
 using Microsoft.Extensions.Logging;
@@ -328,8 +329,11 @@ public class VdoNecCryptoService : IImmoCryptoService
 /// </summary>
 public class ImmoDataFileService
 {
-    public ImmoDataFileService()
+    private readonly ILogger<ImmoDataFileService>? _logger;
+
+    public ImmoDataFileService(ILogger<ImmoDataFileService>? logger = null)
     {
+        _logger = logger;
     }
 
     /// <summary>
@@ -393,7 +397,7 @@ public class ImmoDataFileService
     /// </summary>
     public string ExportImmoDataToText(DecryptedImmoData data)
     {
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         
         sb.AppendLine("=== IMMO4 Decrypted Data ===");
         sb.AppendLine($"PIN: {data.Pin ?? "N/A"}");

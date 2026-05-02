@@ -3,10 +3,12 @@ namespace App.UI;
 using System.IO;
 using System.Text;
 using System.Windows;
+using System.Windows.Media;
 using Microsoft.Win32;
 using App.Core;
 using App.Models;
 using App.Crypto;
+using MemoryMap = App.Core.MemoryMap;
 
 /// <summary>
 /// Главное окно приложения VAG EEPROM Editor
@@ -263,7 +265,7 @@ public partial class MainWindow : Window
         TxtDumpStatus.Text = identification.IsValid 
             ? $"✓ Дамп корректен\nТип: {identification.DetectedType}" 
             : $"⚠ {identification.Error}";
-        TxtDumpSize.Text = $"Размер: {data.DumpSize} байт ({App.Core.MemoryMap.GetDumpType(data.DumpSize)})";
+        TxtDumpSize.Text = $"Размер: {data.DumpSize} байт ({MemoryMap.GetDumpType(data.DumpSize)})";
 
         UpdateImmoStatusDisplay();
         
@@ -281,25 +283,22 @@ public partial class MainWindow : Window
         if (_currentData == null)
         {
             TxtImmoStatus.Text = "Статус: Не загружено";
-            EllImmoIndicator.Fill = System.Windows.Media.Brushes.Gray;
+            EllImmoIndicator.Fill = Brushes.Gray;
             return;
         }
 
         if (_currentData.IsImmoEnabled)
         {
             TxtImmoStatus.Text = "Статус: ВКЛЮЧЕН";
-            EllImmoIndicator.Fill = System.Windows.Media.Brushes.Red;
+            EllImmoIndicator.Fill = Brushes.Red;
         }
         else
         {
             TxtImmoStatus.Text = "Статус: ВЫКЛЮЧЕН";
-            EllImmoIndicator.Fill = System.Windows.Media.Brushes.Green;
+            EllImmoIndicator.Fill = Brushes.Green;
         }
     }
 
-    /// <summary>
-    /// Обновление Hex представления
-    /// </summary>
     private void UpdateHexView(byte[] data)
     {
         if (data == null || data.Length == 0)
@@ -308,7 +307,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var sb = new StringBuilder();
+        var sb = new System.Text.StringBuilder();
         int linesToShow = Math.Min(data.Length / 16 + 1, 500); // Ограничение для производительности
         
         for (int i = 0; i < linesToShow * 16 && i < data.Length; i += 16)
@@ -386,7 +385,7 @@ public partial class MainWindow : Window
         TxtMac.Text = string.Empty;
         TxtImmoStatus.Text = "Статус: Не загружено";
         TxtKeyCount.Text = "Ключей прописано: 0";
-        EllImmoIndicator.Fill = System.Windows.Media.Brushes.Gray;
+        EllImmoIndicator.Fill = Brushes.Gray;
     }
 
     /// <summary>
