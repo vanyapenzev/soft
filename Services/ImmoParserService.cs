@@ -48,10 +48,6 @@ public class ImmoParserService
         // Парсим ключи
         List<KeyInfo>? keys = ParseKeys(data, map);
         
-        // Обработка null для keys
-        if (keys == null)
-            keys = new List<KeyInfo>();
-        
         // Проверяем CRC
         ushort? storedCrc = null;
         ushort? calculatedCrc = null;
@@ -97,7 +93,7 @@ public class ImmoParserService
             CalculatedCrc: calculatedCrc,
             IsCrcValid: isCrcValid,
             Options: options,
-            Keys: keys.Count > 0 ? keys : null
+            Keys: keys
         );
     }
 
@@ -282,7 +278,7 @@ public class ImmoParserService
         };
         
         if (keyDataOffset + 16 > data.Length)
-            return null;
+            return (List<KeyInfo>?)null;
         
         // Читаем до 4 ключей (каждый ключ занимает 4 байта)
         for (int i = 0; i < 4; i++)
@@ -309,7 +305,7 @@ public class ImmoParserService
             }
         }
         
-        return keys.Count > 0 ? keys : null;
+        return keys.Count > 0 ? (List<KeyInfo>?)keys : null;
     }
     
     /// <summary>
