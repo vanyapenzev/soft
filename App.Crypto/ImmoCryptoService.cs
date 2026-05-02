@@ -1,6 +1,7 @@
 namespace App.Crypto;
 
 using App.Models;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для расшифровки данных иммобилайзера VDO/Continental IMMO4

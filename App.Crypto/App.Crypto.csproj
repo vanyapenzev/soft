@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\App.Models\App.Models.csproj" />
     <ProjectReference Include="..\App.Core\App.Core.csproj" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
