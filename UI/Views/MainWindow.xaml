@@ -1,21 +1,20 @@
-<Window x:Class="VagImmoEditor.Pro.UI.Views.MainWindow"
+<Window x:Class="VagImmoEditor.UI.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:vm="clr-namespace:VagImmoEditor.Pro.UI.ViewModels"
-        xmlns:converters="clr-namespace:VagImmoEditor.Pro.UI.Converters"
+        xmlns:vm="clr-namespace:VagImmoEditor.UI.ViewModels"
         mc:Ignorable="d"
-        Title="VAG IMMO Editor Pro - 24LC64 EEPROM Editor" 
-        Height="700" Width="1000"
-        WindowStartupLocation="CenterScreen">
+        Title="VAG IMMO Editor Pro - 24LC64" 
+        Height="700" Width="900"
+        WindowStartupLocation="CenterScreen"
+        Background="#F5F5F5">
     
-    <Window.Resources>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVis"/>
-        <converters:CrcStatusToColorConverter x:Key="CrcToColor"/>
-    </Window.Resources>
+    <Window.DataContext>
+        <vm:MainViewModel/>
+    </Window.DataContext>
     
-    <Grid Margin="10">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -23,148 +22,139 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Menu Bar -->
-        <Menu Grid.Row="0">
-            <MenuItem Header="_File">
-                <MenuItem Header="_Open" Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O"/>
-                <MenuItem Header="_Save" Command="{Binding SaveFileCommand}" InputGestureText="Ctrl+S"/>
-                <Separator/>
-                <MenuItem Header="E_xport to JSON" Command="{Binding ExportToJsonCommand}"/>
-                <Separator/>
-                <MenuItem Header="E_xit" Click="Exit_Click"/>
-            </MenuItem>
-            <MenuItem Header="_Edit">
-                <MenuItem Header="_Undo" Command="{Binding UndoCommand}" InputGestureText="Ctrl+Z"/>
-                <MenuItem Header="_Redo" Command="{Binding RedoCommand}" InputGestureText="Ctrl+Y"/>
-                <Separator/>
-                <MenuItem Header="_Compare Files" Command="{Binding CompareFilesCommand}"/>
-            </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="_About" Click="About_Click"/>
-            </MenuItem>
-        </Menu>
-
-        <!-- Toolbar -->
-        <ToolBarTray Grid.Row="1">
-            <ToolBar>
-                <Button Content="📂 Open" Command="{Binding OpenFileCommand}" ToolTip="Open BIN file"/>
-                <Button Content="💾 Save" Command="{Binding SaveFileCommand}" ToolTip="Save BIN file"/>
-                <Separator/>
-                <Button Content="↩ Undo" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndo}"/>
-                <Button Content="↪ Redo" Command="{Binding RedoCommand}" IsEnabled="{Binding CanRedo}"/>
-                <Separator/>
-                <Button Content="📊 Export JSON" Command="{Binding ExportToJsonCommand}"/>
-                <Button Content="🔍 Compare" Command="{Binding CompareFilesCommand}"/>
-            </ToolBar>
-        </ToolBarTray>
-
-        <!-- Main Content -->
-        <Grid Grid.Row="2" Margin="0,10,0,0">
+        <!-- Заголовок и кнопки -->
+        <Grid Grid.Row="0" Margin="0,0,0,20">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="350"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-
-            <!-- Left Panel - IMMO Data -->
-            <GroupBox Grid.Column="0" Header="IMMO Data" Margin="0,0,5,0">
-                <StackPanel Margin="10">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock Grid.Row="0" Text="File:" FontWeight="Bold"/>
-                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding FileName}" TextWrapping="Wrap"/>
-
-                        <TextBlock Grid.Row="1" Text="Type:" FontWeight="Bold"/>
-                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ImmoType}"/>
-
-                        <TextBlock Grid.Row="2" Text="Manufacturer:" FontWeight="Bold"/>
-                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Manufacturer}"/>
-
-                        <TextBlock Grid.Row="3" Text="PIN Code:" FontWeight="Bold" Foreground="Red"/>
-                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PinCode, UpdateSourceTrigger=PropertyChanged}" 
-                                 FontSize="16" FontWeight="Bold" MaxLength="7"/>
-
-                        <TextBlock Grid.Row="4" Text="Mileage:" FontWeight="Bold"/>
-                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding Mileage, UpdateSourceTrigger=PropertyChanged}" 
-                                 FontSize="14"/>
-                        <TextBlock Grid.Row="4" Grid.Column="1" Text=" km" HorizontalAlignment="Right" Margin="0,0,5,0"/>
-
-                        <TextBlock Grid.Row="5" Text="VIN:" FontWeight="Bold"/>
-                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding Vin, UpdateSourceTrigger=PropertyChanged}" 
-                                 MaxLength="17" CharacterCasing="Upper"/>
-
-                        <TextBlock Grid.Row="6" Text="Key Count:" FontWeight="Bold"/>
-                        <TextBox Grid.Row="6" Grid.Column="1" Text="{Binding KeyCount, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="50" HorizontalAlignment="Left"/>
-
-                        <TextBlock Grid.Row="7" Text="Country Code:" FontWeight="Bold"/>
-                        <TextBox Grid.Row="7" Grid.Column="1" Text="{Binding CountryCode, UpdateSourceTrigger=PropertyChanged}" 
-                                 Width="50" HorizontalAlignment="Left"/>
-
-                        <TextBlock Grid.Row="8" Text="CRC Status:" FontWeight="Bold"/>
-                        <TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding CrcStatus}" 
-                                   FontWeight="Bold" Foreground="{Binding CrcStatus, Converter={StaticResource CrcToColor}}"/>
-
-                        <TextBlock Grid.Row="9" Text="EEPROM Map:" FontWeight="Bold"/>
-                        <ComboBox Grid.Row="9" Grid.Column="1" ItemsSource="{Binding AvailableMaps}" 
-                                  SelectedItem="{Binding SelectedMap}" DisplayMemberPath="Name"/>
-                    </Grid>
-
-                    <!-- Options -->
-                    <GroupBox Header="Options" Margin="0,15,0,0">
-                        <StackPanel Margin="5">
-                            <CheckBox Content="Component Protection" 
-                                      IsChecked="{Binding ComponentProtection}"
-                                      ToolTip="{Binding Options[0].Tooltip}"/>
-                            <CheckBox Content="Learning Mode" 
-                                      IsChecked="{Binding LearningMode}"
-                                      ToolTip="{Binding Options[1].Tooltip}"/>
-                            <CheckBox Content="Immobilizer Active" 
-                                      IsChecked="{Binding ImmobilizerActive}"
-                                      ToolTip="{Binding Options[2].Tooltip}"/>
-                        </StackPanel>
-                    </GroupBox>
-                </StackPanel>
-            </GroupBox>
-
-            <!-- Right Panel - Hex Editor Preview -->
-            <GroupBox Grid.Column="1" Header="EEPROM Hex View (Preview)">
-                <Grid Margin="10">
-                    <TextBlock Text="Hex editor view would be implemented here.&#10;&#10;Full hex editor with direct byte editing is planned for future versions." 
-                               TextWrapping="Wrap" VerticalAlignment="Center" HorizontalAlignment="Center" 
-                               FontStyle="Italic" Foreground="Gray"/>
-                </Grid>
-            </GroupBox>
+            
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="VAG IMMO Editor Pro" FontSize="28" FontWeight="Bold" Foreground="#333"/>
+                <TextBlock Text="Редактор прошивок иммобилайзеров VAG (24LC64)" FontSize="14" Foreground="#666" Margin="0,5,0,0"/>
+            </StackPanel>
+            
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Content="📂 Открыть" Command="{Binding LoadFileCommand}" Style="{StaticResource ModernButton}" Margin="0,0,10,0"/>
+                <Button Content="💾 Сохранить" Command="{Binding SaveFileCommand}" Style="{StaticResource ModernButton}" Margin="0,0,10,0"/>
+                <Button Content="↩ Undo" Command="{Binding UndoCommand}" Style="{StaticResource ModernButton}" Margin="0,0,10,0"/>
+                <Button Content="↪ Redo" Command="{Binding RedoCommand}" Style="{StaticResource ModernButton}"/>
+            </StackPanel>
         </Grid>
 
-        <!-- Status Bar -->
-        <StatusBar Grid.Row="3" Margin="0,10,0,0">
-            <StatusBarItem>
-                <TextBlock Text="{Binding StatusMessage}"/>
-            </StatusBarItem>
-            <StatusBarItem HorizontalAlignment="Right">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="CRC: "/>
-                    <TextBlock Text="{Binding StoredCrc, StringFormat='0x{0:X4}'}" FontWeight="Bold"/>
-                    <TextBlock Text=" → Calculated: "/>
-                    <TextBlock Text="{Binding CalculatedCrc, StringFormat='0x{0:X4}'}" FontWeight="Bold"/>
+        <!-- Основная информация -->
+        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20" Effect="{StaticResource {x:Static SystemColors.DropShadowKey}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- PIN -->
+                <StackPanel Grid.Column="0" Grid.Row="0" Margin="0,0,20,15">
+                    <TextBlock Text="PIN IMMO" Style="{StaticResource DataLabel}" Foreground="#666"/>
+                    <TextBox Text="{Binding PinCode, Mode=OneWay}" FontSize="24" FontWeight="Bold" 
+                             Foreground="#007ACC" BorderThickness="0" Background="Transparent" 
+                             IsReadOnly="True" Margin="0,5,0,0"/>
                 </StackPanel>
-            </StatusBarItem>
-        </StatusBar>
+
+                <!-- Пробег -->
+                <StackPanel Grid.Column="1" Grid.Row="0" Margin="0,0,20,15">
+                    <TextBlock Text="Одометр" Style="{StaticResource DataLabel}" Foreground="#666"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBox Text="{Binding Mileage, Mode=OneWay}" FontSize="24" FontWeight="Bold" 
+                                 Foreground="#007ACC" BorderThickness="0" Background="Transparent" 
+                                 IsReadOnly="True" Width="120"/>
+                        <TextBlock Text="км" FontSize="18" Foreground="#666" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Тип IMMO и CRC -->
+                <StackPanel Grid.Column="2" Grid.Row="0" Margin="0,0,0,15">
+                    <TextBlock Text="Тип / CRC" Style="{StaticResource DataLabel}" Foreground="#666"/>
+                    <StackPanel Margin="0,5,0,0">
+                        <TextBlock Text="{Binding ImmoType}" FontSize="16" FontWeight="Bold" Foreground="#333"/>
+                        <TextBlock Text="{Binding CrcStatus}" FontSize="14" 
+                                   Foreground="{Binding CrcStatus, Converter={StaticResource CrcColorConverter}, FallbackValue=Green}"
+                                   Margin="0,3,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- VIN -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="1" Margin="0,0,0,15">
+                    <TextBlock Text="VIN номер" Style="{StaticResource DataLabel}" Foreground="#666"/>
+                    <TextBox Text="{Binding Vin, Mode=OneWay}" FontSize="16" FontFamily="Consolas" 
+                             Foreground="#333" BorderThickness="0" Background="Transparent" 
+                             IsReadOnly="True" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <!-- Статус -->
+                <StackPanel Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2">
+                    <TextBlock Text="Статус" Style="{StaticResource DataLabel}" Foreground="#666"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontSize="14" Foreground="#007ACC" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Опции -->
+        <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Text="Опции иммобилайзера" FontSize="18" FontWeight="Bold" Foreground="#333" Margin="0,0,0,15"/>
+                
+                <ListBox Grid.Row="1" ItemsSource="{Binding Options}" BorderThickness="0" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Border Padding="10" Margin="0,5" Background="#F9F9F9" CornerRadius="4">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                                        <TextBlock Text="{Binding Description}" FontSize="12" Foreground="#666" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                    
+                                    <CheckBox Grid.Column="1" IsChecked="{Binding IsEnabled, UpdateSourceTrigger=PropertyChanged}"
+                                              VerticalAlignment="Center" Margin="10,0,0,0"/>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+        </Border>
+
+        <!-- Индикатор изменений -->
+        <Border Grid.Row="3" Background="#E8E8E8" CornerRadius="4" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                
+                <TextBlock Grid.Column="0" Text="💡 Совет: После изменения данных CRC пересчитывается автоматически при сохранении" 
+                          Foreground="#666" FontSize="12" VerticalAlignment="Center"/>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock Text="Undo:" Foreground="#666" Margin="0,0,5,0"/>
+                    <TextBlock Text="{Binding UndoCount}" FontWeight="Bold" Margin="0,0,15,0"/>
+                    <TextBlock Text="Redo:" Foreground="#666" Margin="0,0,5,0"/>
+                    <TextBlock Text="{Binding RedoCount}" FontWeight="Bold"/>
+                </StackPanel>
+            </Grid>
+        </Border>
     </Grid>
 </Window>

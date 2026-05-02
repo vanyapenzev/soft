@@ -1,372 +1,219 @@
-using VagImmoEditor.Pro.Data.Maps;
-using VagImmoEditor.Pro.Data.Models;
+using System;
+using System.IO;
+using System.Windows;
+using Microsoft.Win32;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Win32;
+using System.Collections.ObjectModel;
+using VagImmoEditor.Services;
+using VagImmoEditor.Data.Models;
+using VagImmoEditor.Data.Maps;
 
-namespace VagImmoEditor.Pro.UI.ViewModels
+namespace VagImmoEditor.UI.ViewModels;
+
+public partial class MainViewModel : ObservableObject
 {
-    public partial class MainViewModel : ObservableObject
+    private readonly EepromDataService _eepromService;
+    private readonly ImmoParserService _immoParser;
+
+    [ObservableProperty]
+    private string _pinCode = "-----";
+
+    [ObservableProperty]
+    private uint _mileage;
+
+    [ObservableProperty]
+    private string _vin = "";
+
+    [ObservableProperty]
+    private string _immoType = "Не определен";
+
+    [ObservableProperty]
+    private string _crcStatus = "N/A";
+
+    [ObservableProperty]
+    private string _statusMessage = "Готов к работе";
+
+    [ObservableProperty]
+    private bool _isFileLoaded;
+
+    [ObservableProperty]
+    private ObservableCollection<ImmoOptionItem> _options = new();
+
+    public MainViewModel()
     {
-        private readonly EepromDataService _eepromService;
-        private readonly ImmoParserService _parserService;
+        _eepromService = new EepromDataService();
+        _immoParser = new ImmoParserService(_eepromService);
+    }
 
-        [ObservableProperty]
-        private string _fileName = "No file loaded";
-
-        [ObservableProperty]
-        private string _pinCode = "N/A";
-
-        [ObservableProperty]
-        private int _mileage;
-
-        [ObservableProperty]
-        private string? _vin;
-
-        [ObservableProperty]
-        private string _immoType = "Unknown";
-
-        [ObservableProperty]
-        private string _manufacturer = "Unknown";
-
-        [ObservableProperty]
-        private string _crcStatus = "N/A";
-
-        [ObservableProperty]
-        private ushort _storedCrc;
-
-        [ObservableProperty]
-        private ushort _calculatedCrc;
-
-        [ObservableProperty]
-        private int _keyCount;
-
-        [ObservableProperty]
-        private bool _componentProtection;
-
-        [ObservableProperty]
-        private bool _learningMode;
-
-        [ObservableProperty]
-        private bool _immobilizerActive = true;
-
-        [ObservableProperty]
-        private short _countryCode;
-
-        [ObservableProperty]
-        private string _statusMessage = "Ready";
-
-        [ObservableProperty]
-        private bool _canUndo;
-
-        [ObservableProperty]
-        private bool _canRedo;
-
-        [ObservableProperty]
-        private EepromMap? _selectedMap;
-
-        [ObservableProperty]
-        private ObservableCollection<EepromMap> _availableMaps = new();
-
-        public ObservableCollection<ImmoOption> Options { get; } = new();
-
-        public MainViewModel()
+    [RelayCommand]
+    private void LoadFile()
+    {
+        var dialog = new OpenFileDialog
         {
-            _eepromService = new EepromDataService();
-            _parserService = new ImmoParserService(_eepromService);
+            Filter = "BIN файлы|*.bin|Все файлы|*.*",
+            Title = "Открыть дамп EEPROM"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var result = _eepromService.LoadFromFile(dialog.FileName);
             
-            LoadAvailableMaps();
-            InitializeOptions();
-        }
-
-        private void LoadAvailableMaps()
-        {
-            AvailableMaps.Clear();
-            foreach (var map in EepromMapService.GetAllMaps())
-            {
-                AvailableMaps.Add(map);
-            }
-            
-            if (AvailableMaps.Count > 0)
-                SelectedMap = AvailableMaps[0];
-        }
-
-        private void InitializeOptions()
-        {
-            Options.Add(new ImmoOption
-            {
-                Id = "component_protection",
-                Name = "Component Protection",
-                Description = "Защита компонентов - требует онлайн активации у дилера",
-                IsEnabled = false,
-                Tooltip = "Включите для активации защиты компонентов"
-            });
-            Options.Add(new ImmoOption
-            {
-                Id = "learning_mode",
-                Name = "Learning Mode",
-                Description = "Режим обучения ключей",
-                IsEnabled = false,
-                Tooltip = "Включите для добавления новых ключей"
-            });
-            Options.Add(new ImmoOption
-            {
-                Id = "immobilizer_active",
-                Name = "Immobilizer Active",
-                Description = "Активность иммобилайзера",
-                IsEnabled = true,
-                Tooltip = "Отключите для деактивации иммобилайзера"
-            });
-        }
-
-        [RelayCommand]
-        private void OpenFile()
-        {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "BIN files (*.bin)|*.bin|All files (*.*)|*.*",
-                Title = "Open EEPROM dump"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                var result = _eepromService.LoadFromFile(dialog.FileName);
-                if (result.Success)
-                {
-                    FileName = System.IO.Path.GetFileName(dialog.FileName);
-                    ParseAndDisplayData();
-                    StatusMessage = result.Message;
-                }
-                else
-                {
-                    StatusMessage = $"Error: {result.Message}";
-                }
-            }
-        }
-
-        [RelayCommand]
-        private void SaveFile()
-        {
-            var dialog = new SaveFileDialog
-            {
-                Filter = "BIN files (*.bin)|*.bin|All files (*.*)|*.*",
-                Title = "Save EEPROM dump",
-                FileName = System.IO.Path.GetFileNameWithoutExtension(FileName) + "_modified.bin"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                // Обновляем данные из UI перед сохранением
-                UpdateEepromFromUi();
-                
-                // Пересчитываем CRC если нужно
-                RecalculateCrc();
-                
-                var result = _eepromService.SaveToFile(dialog.FileName);
-                StatusMessage = result.Success ? result.Message : $"Error: {result.Message}";
-            }
-        }
-
-        [RelayCommand]
-        private void Undo()
-        {
-            var result = _eepromService.Undo();
             if (result.Success)
             {
-                ParseAndDisplayData();
+                RefreshData();
                 StatusMessage = result.Message;
+                IsFileLoaded = true;
             }
-            UpdateUndoRedoState();
+            else
+            {
+                StatusMessage = $"Ошибка: {result.Message}";
+                IsFileLoaded = false;
+            }
+        }
+    }
+
+    [RelayCommand]
+    private void SaveFile()
+    {
+        if (!IsFileLoaded)
+        {
+            StatusMessage = "Сначала загрузите файл";
+            return;
         }
 
-        [RelayCommand]
-        private void Redo()
+        var dialog = new SaveFileDialog
         {
-            var result = _eepromService.Redo();
+            Filter = "BIN файлы|*.bin|Все файлы|*.*",
+            Title = "Сохранить дамп EEPROM",
+            DefaultExt = "bin"
+        };
+
+        if (dialog.ShowDialog() == true)
+        {
+            var result = _eepromService.SaveToFile(dialog.FileName);
+            StatusMessage = result.Message;
+            
             if (result.Success)
             {
-                ParseAndDisplayData();
-                StatusMessage = result.Message;
-            }
-            UpdateUndoRedoState();
-        }
-
-        partial void OnSelectedMapChanged(EepromMap? value)
-        {
-            if (value != null && _eepromService.Data.Length > 0)
-            {
-                ParseAndDisplayData();
+                RefreshData();
             }
         }
+    }
 
-        private void ParseAndDisplayData()
+    [RelayCommand]
+    private void Undo()
+    {
+        if (_eepromService.Undo())
         {
-            var immoData = _parserService.ParseImmoData(SelectedMap);
+            RefreshData();
+            StatusMessage = "Отменено последнее изменение";
+        }
+    }
+
+    [RelayCommand]
+    private void Redo()
+    {
+        if (_eepromService.Redo())
+        {
+            RefreshData();
+            StatusMessage = "Повторено изменение";
+        }
+    }
+
+    [RelayCommand]
+    private void UpdatePin(string newPin)
+    {
+        if (!IsFileLoaded) return;
+
+        if (_immoParser.UpdatePin(newPin))
+        {
+            RefreshData();
+            StatusMessage = $"PIN обновлен: {newPin}";
+        }
+        else
+        {
+            StatusMessage = "Ошибка обновления PIN. Проверьте формат (4-7 цифр)";
+        }
+    }
+
+    [RelayCommand]
+    private void UpdateMileage(uint newMileage)
+    {
+        if (!IsFileLoaded) return;
+
+        if (_immoParser.UpdateMileage(newMileage))
+        {
+            RefreshData();
+            StatusMessage = $"Пробег обновлен: {newMileage} км";
+        }
+        else
+        {
+            StatusMessage = "Ошибка обновления пробега";
+        }
+    }
+
+    [RelayCommand]
+    private void ToggleOption(ImmoOptionItem optionItem)
+    {
+        if (!IsFileLoaded || optionItem.Option == null) return;
+
+        var option = optionItem.Option;
+        if (_immoParser.ToggleOption(option, optionItem.IsEnabled))
+        {
+            RefreshData();
+            StatusMessage = $"Опция '{option.Name}' изменена";
+        }
+    }
+
+    private void RefreshData()
+    {
+        try
+        {
+            var immoData = _immoParser.ParseImmoData();
 
             PinCode = immoData.PinCode;
             Mileage = immoData.Mileage;
             Vin = immoData.Vin;
-            ImmoType = immoData.ImmoTypeName;
-            Manufacturer = immoData.ManufacturerName;
-            CrcStatus = immoData.CrcStatus;
-            StoredCrc = immoData.StoredCrc;
-            CalculatedCrc = immoData.CalculatedCrc;
-            KeyCount = immoData.KeyCount;
-            ComponentProtection = immoData.ComponentProtection;
-            LearningMode = immoData.LearningMode;
-            ImmobilizerActive = immoData.IsImmobilizerActive;
-            CountryCode = immoData.CountryCode;
+            ImmoType = _eepromService.CurrentMap.Name;
+            
+            CrcStatus = immoData.IsCrcValid ? "VALID ✓" : "INVALID ✗";
 
             // Обновляем опции
-            if (Options.Count >= 3)
+            Options.Clear();
+            foreach (var opt in immoData.Options)
             {
-                Options[0].IsEnabled = ComponentProtection;
-                Options[1].IsEnabled = LearningMode;
-                Options[2].IsEnabled = ImmobilizerActive;
+                Options.Add(new ImmoOptionItem(opt));
             }
-
-            UpdateUndoRedoState();
         }
-
-        private void UpdateEepromFromUi()
+        catch (Exception ex)
         {
-            var map = SelectedMap ?? EepromMapService.GetMapByImmoType(DetectImmoType());
-            if (map == null) return;
-
-            // Обновление PIN кода
-            if (!string.IsNullOrEmpty(PinCode) && PinCode != "N/A" && PinCode != "Invalid")
-            {
-                try
-                {
-                    var pinBytes = Core.Codecs.BcdCodec.Encode(PinCode, map.PinLength * 2);
-                    _eepromService.SetRange(map.PinOffset, pinBytes, "Update PIN");
-                }
-                catch (Exception ex)
-                {
-                    StatusMessage = $"Invalid PIN format: {ex.Message}";
-                }
-            }
-
-            // Обновление пробега
-            var mileageValue = Mileage / map.MileageMultiplier;
-            if (map.MileageIsBcd)
-            {
-                var mileageBytes = Core.Codecs.BcdCodec.EncodeFromInt(mileageValue, map.MileageLength * 2);
-                _eepromService.SetRange(map.MileageOffset, mileageBytes, "Update Mileage");
-            }
-
-            // Обновление флагов
-            if (map.FlagsOffset >= 0)
-            {
-                byte flags = _eepromService.ReadByte(map.FlagsOffset);
-                
-                if (map.ComponentProtectionBit >= 0)
-                {
-                    if (ComponentProtection)
-                        flags |= (byte)(1 << map.ComponentProtectionBit);
-                    else
-                        flags &= (byte)~(1 << map.ComponentProtectionBit);
-                }
-                
-                if (map.LearningModeBit >= 0)
-                {
-                    if (LearningMode)
-                        flags |= (byte)(1 << map.LearningModeBit);
-                    else
-                        flags &= (byte)~(1 << map.LearningModeBit);
-                }
-                
-                if (map.ImmobilizerActiveBit >= 0)
-                {
-                    if (ImmobilizerActive)
-                        flags |= (byte)(1 << map.ImmobilizerActiveBit);
-                    else
-                        flags &= (byte)~(1 << map.ImmobilizerActiveBit);
-                }
-                
-                _eepromService.WriteByte(map.FlagsOffset, flags, "Update Flags");
-            }
-
-            // Обновление количества ключей
-            if (map.KeyCountOffset >= 0)
-            {
-                _eepromService.WriteByte(map.KeyCountOffset, (byte)KeyCount, "Update Key Count");
-            }
+            StatusMessage = $"Ошибка парсинга: {ex.Message}";
         }
+    }
+}
 
-        private void RecalculateCrc()
-        {
-            var map = SelectedMap ?? EepromMapService.GetMapByImmoType(DetectImmoType());
-            if (map == null || map.CrcOffset < 0) return;
+/// <summary>
+/// Обертка для опции в UI
+/// </summary>
+public partial class ImmoOptionItem : ObservableObject
+{
+    public ImmoOption? Option { get; }
 
-            _eepromService.UpdateCrc(map.CrcAlgorithm, map.CrcStartOffset, map.CrcLength, map.CrcOffset);
-        }
+    [ObservableProperty]
+    private bool _isEnabled;
 
-        private ImmoType DetectImmoType()
-        {
-            return _parserService.DetectImmoType();
-        }
+    [ObservableProperty]
+    private string _name = "";
 
-        private void UpdateUndoRedoState()
-        {
-            CanUndo = _eepromService.CanUndo;
-            CanRedo = _eepromService.CanRedo;
-        }
+    [ObservableProperty]
+    private string _description = "";
 
-        [RelayCommand]
-        private void ExportToJson()
-        {
-            var dialog = new SaveFileDialog
-            {
-                Filter = "JSON files (*.json)|*.json|All files (*.*)|*.*",
-                Title = "Export data to JSON"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                var immoData = _parserService.ParseImmoData(SelectedMap);
-                var json = Newtonsoft.Json.JsonConvert.SerializeObject(immoData, Newtonsoft.Json.Formatting.Indented);
-                System.IO.File.WriteAllText(dialog.FileName, json);
-                StatusMessage = "Data exported to JSON";
-            }
-        }
-
-        [RelayCommand]
-        private void CompareFiles()
-        {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "BIN files (*.bin)|*.bin|All files (*.*)|*.*",
-                Title = "Select file to compare"
-            };
-
-            if (dialog.ShowDialog() == true)
-            {
-                var originalData = _eepromService.Data;
-                var compareResult = _eepromService.LoadFromFile(dialog.FileName);
-                
-                if (compareResult.Success)
-                {
-                    var compareData = _eepromService.Data;
-                    var differences = new List<string>();
-                    
-                    for (int i = 0; i < Math.Min(originalData.Length, compareData.Length); i++)
-                    {
-                        if (originalData[i] != compareData[i])
-                        {
-                            differences.Add($"Offset 0x{i:X4}: 0x{originalData[i]:X2} -> 0x{compareData[i]:X2}");
-                        }
-                    }
-                    
-                    // Восстанавливаем оригинальные данные
-                    _eepromService.LoadFromBytes(originalData);
-                    
-                    if (differences.Count == 0)
-                        StatusMessage = "Files are identical";
-                    else
-                        StatusMessage = $"Found {differences.Count} differences. Check log for details.";
-                }
-            }
-        }
+    public ImmoOptionItem(ImmoOption option)
+    {
+        Option = option;
+        IsEnabled = option.Value;
+        Name = option.Name;
+        Description = option.Description;
     }
 }
