@@ -22,6 +22,8 @@ public class ImmoParserService
         { ImmoType.IMMO3_Motorola, new[] { 0x1F0, 0x1C0, 0x1A0 } },
         { ImmoType.IMMO3_NEC, new[] { 0x1E8, 0x1D8, 0x1B8 } },
         { ImmoType.IMMO4_Kayaba, new[] { 0x200, 0x1F0, 0x1D0 } },
+        { ImmoType.IMMO4_VDO, new[] { 0x280, 0x270, 0x250 } },
+        { ImmoType.IMMO4_Bosch, new[] { 0x290, 0x280, 0x260 } },
         { ImmoType.IMMO2, new[] { 0x0F0, 0x0E0, 0x0C0 } }
     };
 
@@ -44,7 +46,7 @@ public class ImmoParserService
         string vin = ParseVin(data, map);
         
         // Парсим ключи
-        List<KeyInfo> keys = ParseKeys(data, map);
+        List<KeyInfo>? keys = ParseKeys(data, map);
         
         // Проверяем CRC
         ushort? storedCrc = null;
@@ -54,17 +56,24 @@ public class ImmoParserService
         {
             try
             {
-                storedCrc = map.IsBigEndian
-                    ? (ushort)((data[map.CrcOffset] << 8) | data[map.CrcOffset + 1])
-                    : (ushort)((data[map.CrcOffset + 1] << 8) | data[map.CrcOffset]);
+                // Читаем CRC с правильным порядком байт
+                ushort storedCrcValue;
+                if (map.IsBigEndian)
+                    storedCrcValue = (ushort)((data[map.CrcOffset] << 8) | data[map.CrcOffset + 1]);
+                else
+                    storedCrcValue = (ushort)(data[map.CrcOffset] | (data[map.CrcOffset + 1] << 8));
+                
+                storedCrc = storedCrcValue;
                 
                 int crcDataLength = map.CrcOffset;
-                calculatedCrc = map.Type switch
+                ushort? calculatedCrcValue = map.Type switch
                 {
-                    ImmoType.IMMO3_Motorola or ImmoType.IMMO4_Kayaba 
+                    ImmoType.IMMO3_Motorola or ImmoType.IMMO4_Kayaba or ImmoType.IMMO4_Bosch
                         => Core.Crc.CrcCalculator.CalculateCrc16Motorola(data, 0, crcDataLength),
                     _ => Core.Crc.CrcCalculator.CalculateCrc16Ccitt(data, 0, crcDataLength)
                 };
+                
+                calculatedCrc = calculatedCrcValue;
             }
             catch
             {
@@ -226,7 +235,7 @@ public class ImmoParserService
             }
         }
         
-        return null;
+        return (string?)null;
     }
     
     /// <summary>
@@ -251,7 +260,7 @@ public class ImmoParserService
     /// <summary>
     /// Парсинг информации о ключах
     /// </summary>
-    private List<KeyInfo> ParseKeys(byte[] data, EepromMap map)
+    private List<KeyInfo>? ParseKeys(byte[] data, EepromMap map)
     {
         var keys = new List<KeyInfo>();
         
@@ -262,12 +271,14 @@ public class ImmoParserService
             ImmoType.IMMO3_Motorola => 0x190,
             ImmoType.IMMO3_NEC => 0x1A8,
             ImmoType.IMMO4_Kayaba => 0x280,
+            ImmoType.IMMO4_VDO => 0x300,
+            ImmoType.IMMO4_Bosch => 0x310,
             ImmoType.IMMO2 => 0x0A0,
             _ => 0x1A0
         };
         
         if (keyDataOffset + 16 > data.Length)
-            return keys;
+            return (List<KeyInfo>?)null;
         
         // Читаем до 4 ключей (каждый ключ занимает 4 байта)
         for (int i = 0; i < 4; i++)
@@ -294,7 +305,7 @@ public class ImmoParserService
             }
         }
         
-        return keys;
+        return keys.Count > 0 ? (List<KeyInfo>?)keys : null;
     }
     
     /// <summary>
@@ -304,7 +315,7 @@ public class ImmoParserService
     {
         ImmoType.IMMO2 => "ID46 (Crypto)",
         ImmoType.IMMO3_VDO or ImmoType.IMMO3_Motorola or ImmoType.IMMO3_NEC => "ID46 (Crypto)",
-        ImmoType.IMMO4_Kayaba => "ID48",
+        ImmoType.IMMO4_Kayaba or ImmoType.IMMO4_VDO or ImmoType.IMMO4_Bosch => "ID48",
         _ => "Unknown"
     };
 
@@ -321,6 +332,8 @@ public class ImmoParserService
             ImmoType.IMMO3_Motorola => 0x1F9,
             ImmoType.IMMO3_NEC => 0x1F8,
             ImmoType.IMMO4_Kayaba => 0x2F0,
+            ImmoType.IMMO4_VDO => 0x3F0,
+            ImmoType.IMMO4_Bosch => 0x3F8,
             ImmoType.IMMO2 => 0x0F8,
             _ => 0x1F8
         };
@@ -467,7 +480,12 @@ public class ImmoParserService
     {
         try
         {
-            byte currentValue = _eepromService.ReadByte(option.Offset);
+            byte? currentValueNullable = _eepromService.ReadByte(option.Offset);
+            
+            if (!currentValueNullable.HasValue)
+                return false;
+                
+            byte currentValue = currentValueNullable.Value;
             byte newValueByte;
 
             if (option.BitIndex >= 4 && option.Mask > 0x0F)
@@ -492,8 +510,7 @@ public class ImmoParserService
                     newValueByte = (byte)(currentValue & ~option.Mask);
             }
 
-            _eepromService.WriteByte(option.Offset, newValueByte);
-            return true;
+            return _eepromService.WriteByte(option.Offset, newValueByte);
         }
         catch (Exception ex)
         {

@@ -41,6 +41,12 @@ public class EepromDataService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _lastError = "Путь к файлу не указан";
+                return new EepromResult(false, _lastError);
+            }
+            
             if (!File.Exists(filePath))
             {
                 _lastError = "Файл не найден";
@@ -58,9 +64,10 @@ public class EepromDataService
 
             byte[] fileData = File.ReadAllBytes(filePath);
             
-            // Копируем данные в буфер
+            // Копируем данные в буфер с защитой от переполнения
             Array.Clear(_data, 0, _data.Length);
-            Buffer.BlockCopy(fileData, 0, _data, 0, fileData.Length);
+            int copyLength = Math.Min(fileData.Length, EepromSize);
+            Buffer.BlockCopy(fileData, 0, _data, 0, copyLength);
             
             // Очищаем историю при загрузке нового файла
             _undoStack.Clear();
@@ -72,7 +79,7 @@ public class EepromDataService
             AutoDetectImmoType();
             var crcValid = ValidateCrc();
             
-            _operationLog.Add($"Загружен файл: {Path.GetFileName(filePath)}, Тип: {_currentMap.Name}, CRC: {(crcValid ? "OK" : "INVALID")}");
+            _operationLog.Add($"Загружен файл: {Path.GetFileName(filePath)}, Размер: {fileInfo.Length} байт, Тип: {_currentMap.Name}, CRC: {(crcValid ? "OK" : "INVALID")}");
 
             return new EepromResult(true, 
                 $"Файл загружен. Тип: {_currentMap.Name}. CRC: {(crcValid ? "OK" : "INVALID")}", 
@@ -99,6 +106,19 @@ public class EepromDataService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                _lastError = "Путь к файлу не указан";
+                return new EepromResult(false, _lastError);
+            }
+            
+            // Проверка данных перед сохранением
+            if (_data == null || _data.Length != EepromSize)
+            {
+                _lastError = "Некорректные данные EEPROM";
+                return new EepromResult(false, _lastError);
+            }
+            
             // Пересчет CRC перед сохранением
             RecalculateCrc();
 
@@ -125,10 +145,10 @@ public class EepromDataService
     /// <summary>
     /// Чтение байта по смещению с проверкой границ
     /// </summary>
-    public byte ReadByte(int offset)
+    public byte? ReadByte(int offset)
     {
         if (offset < 0 || offset >= _data.Length)
-            throw new ArgumentOutOfRangeException(nameof(offset), $"Смещение {offset} вне диапазона [0, {_data.Length - 1}]");
+            return null;
         
         return _data[offset];
     }
@@ -136,29 +156,32 @@ public class EepromDataService
     /// <summary>
     /// Запись байта с сохранением в историю для Undo
     /// </summary>
-    public void WriteByte(int offset, byte value)
+    public bool WriteByte(int offset, byte value)
     {
         if (offset < 0 || offset >= _data.Length)
-            throw new ArgumentOutOfRangeException(nameof(offset));
+            return false;
 
         byte oldValue = _data[offset];
-        if (oldValue == value) return;
+        if (oldValue == value) return true;
 
         _data[offset] = value;
         _undoStack.Push(new ChangeRecord(offset, oldValue, value, DateTime.Now));
         _redoStack.Clear();
         _isDirty = true;
+        
+        return true;
     }
 
     /// <summary>
     /// Запись диапазона байтов
     /// </summary>
-    public void WriteRange(int offset, byte[] data)
+    public bool WriteRange(int offset, byte[] data)
     {
-        if (data == null) throw new ArgumentNullException(nameof(data));
+        if (data == null) return false;
         if (offset < 0 || offset + data.Length > _data.Length)
-            throw new ArgumentOutOfRangeException(nameof(offset), $"Диапазон [{offset}, {offset + data.Length}) вне границ EEPROM");
+            return false;
 
+        bool hasChanges = false;
         for (int i = 0; i < data.Length; i++)
         {
             byte oldValue = _data[offset + i];
@@ -166,12 +189,17 @@ public class EepromDataService
             {
                 _undoStack.Push(new ChangeRecord(offset + i, oldValue, data[i], DateTime.Now));
                 _data[offset + i] = data[i];
+                hasChanges = true;
             }
         }
         
-        if (_undoStack.Count > 0)
+        if (hasChanges)
+        {
             _redoStack.Clear();
-        _isDirty = true;
+            _isDirty = true;
+        }
+        
+        return true;
     }
 
     /// <summary>
@@ -228,18 +256,21 @@ public class EepromDataService
         try
         {
             // Читаем сохраненный CRC
-            ushort storedCrc = _currentMap.IsBigEndian
-                ? (ushort)((_data[_currentMap.CrcOffset] << 8) | _data[_currentMap.CrcOffset + 1])
-                : (ushort)((_data[_currentMap.CrcOffset + 1] << 8) | _data[_currentMap.CrcOffset]);
+            ushort storedCrc;
+            if (_currentMap.IsBigEndian)
+                storedCrc = (ushort)((_data[_currentMap.CrcOffset] << 8) | _data[_currentMap.CrcOffset + 1]);
+            else
+                storedCrc = (ushort)(_data[_currentMap.CrcOffset] | (_data[_currentMap.CrcOffset + 1] << 8));
 
             // Вычисляем CRC для данных до CRC поля
             int crcDataLength = _currentMap.CrcOffset;
-            ushort calculatedCrc;
+            ushort? calculatedCrc;
 
             switch (_currentMap.Type)
             {
                 case ImmoType.IMMO3_Motorola:
                 case ImmoType.IMMO4_Kayaba:
+                case ImmoType.IMMO4_Bosch:
                     calculatedCrc = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
                     break;
                 default:
@@ -247,7 +278,7 @@ public class EepromDataService
                     break;
             }
 
-            return storedCrc == calculatedCrc;
+            return calculatedCrc.HasValue && storedCrc == calculatedCrc.Value;
         }
         catch (Exception ex)
         {
@@ -270,18 +301,27 @@ public class EepromDataService
         }
 
         int crcDataLength = _currentMap.CrcOffset;
-        ushort newCrc;
+        ushort? newCrcNullable;
 
         switch (_currentMap.Type)
         {
             case ImmoType.IMMO3_Motorola:
             case ImmoType.IMMO4_Kayaba:
-                newCrc = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
+            case ImmoType.IMMO4_Bosch:
+                newCrcNullable = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
                 break;
             default:
-                newCrc = CrcCalculator.CalculateCrc16Ccitt(_data, 0, crcDataLength);
+                newCrcNullable = CrcCalculator.CalculateCrc16Ccitt(_data, 0, crcDataLength);
                 break;
         }
+
+        if (!newCrcNullable.HasValue)
+        {
+            _lastError = "Не удалось вычислить CRC";
+            return;
+        }
+
+        ushort newCrc = newCrcNullable.Value;
 
         // Записываем CRC в правильном порядке байт
         if (_currentMap.IsBigEndian)
@@ -305,38 +345,65 @@ public class EepromDataService
     {
         // Проверяем наличие данных в характерных областях для разных типов
         
-        // VDO: PIN обычно в 0x1E0
+        // VDO: PIN обычно в 0x1E0, пробег в 0x1D0
         bool hasVdoPattern = IsDataPresent(0x1E0, 5) && IsDataPresent(0x1D0, 4);
         
-        // Motorola: PIN обычно в 0x1F0
+        // Motorola: PIN обычно в 0x1F0, пробег в 0x1C0
         bool hasMotorolaPattern = IsDataPresent(0x1F0, 7) && IsDataPresent(0x1C0, 4);
         
-        // NEC: PIN обычно в 0x1E8
+        // NEC: PIN обычно в 0x1E8, пробег в 0x1D8
         bool hasNecPattern = IsDataPresent(0x1E8, 5) && IsDataPresent(0x1D8, 4);
         
-        // IMMO4: данные в области 0x200+
+        // IMMO4: данные в области 0x200+, пробег в 0x1F0
         bool hasKayabaPattern = IsDataPresent(0x200, 7) && IsDataPresent(0x1F0, 4);
+        
+        // IMMO4 VDO: данные в области 0x280+, пробег в 0x270
+        bool hasVdo4Pattern = IsDataPresent(0x280, 7) && IsDataPresent(0x270, 4);
+        
+        // IMMO4 Bosch: данные в области 0x290+, пробег в 0x280
+        bool hasBosch4Pattern = IsDataPresent(0x290, 7) && IsDataPresent(0x280, 4);
 
-        if (hasKayabaPattern && !hasVdoPattern && !hasMotorolaPattern)
-            _currentMap = EepromMap.Maps.IMMO4_KAYABA;
-        else if (hasMotorolaPattern && !hasVdoPattern)
-            _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
-        else if (hasNecPattern && !hasVdoPattern)
-            _currentMap = EepromMap.Maps.IMMO3_NEC;
-        else if (hasVdoPattern)
-            _currentMap = EepromMap.Maps.IMMO3_VDO;
-        else
+        // Подсчитываем количество совпадений для более точного определения
+        int vdoScore = (hasVdoPattern ? 2 : 0) + (IsDataPresent(0x1B0, 17) ? 1 : 0);
+        int motorolaScore = (hasMotorolaPattern ? 2 : 0) + (IsDataPresent(0x1A0, 17) ? 1 : 0);
+        int necScore = (hasNecPattern ? 2 : 0) + (IsDataPresent(0x1B8, 17) ? 1 : 0);
+        int kayabaScore = (hasKayabaPattern ? 2 : 0) + (IsDataPresent(0x1D0, 17) ? 1 : 0);
+        int vdo4Score = (hasVdo4Pattern ? 2 : 0) + (IsDataPresent(0x250, 17) ? 1 : 0);
+        int bosch4Score = (hasBosch4Pattern ? 2 : 0) + (IsDataPresent(0x260, 17) ? 1 : 0);
+
+        // Выбираем тип с наибольшим score
+        int maxScore = Math.Max(Math.Max(Math.Max(vdoScore, motorolaScore), Math.Max(necScore, kayabaScore)), Math.Max(vdo4Score, bosch4Score));
+        
+        if (maxScore == 0)
         {
-            // Если ничего не найдено, используем эвристику по первому байту
+            // Если ничего не найдено, используем эвристику по наличию данных в характерных областях
             if (_data[0x1E0] != 0x00 && _data[0x1E0] != 0xFF)
                 _currentMap = EepromMap.Maps.IMMO3_VDO;
             else if (_data[0x1F0] != 0x00 && _data[0x1F0] != 0xFF)
                 _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
+            else if (_data[0x290] != 0x00 && _data[0x290] != 0xFF)
+                _currentMap = EepromMap.Maps.IMMO4_BOSCH;
+            else if (_data[0x280] != 0x00 && _data[0x280] != 0xFF)
+                _currentMap = EepromMap.Maps.IMMO4_VDO;
+            else if (_data[0x200] != 0x00 && _data[0x200] != 0xFF)
+                _currentMap = EepromMap.Maps.IMMO4_KAYABA;
             else
                 _currentMap = EepromMap.Maps.IMMO3_VDO; // Default
         }
+        else if (bosch4Score == maxScore && bosch4Score > kayabaScore && bosch4Score > vdo4Score)
+            _currentMap = EepromMap.Maps.IMMO4_BOSCH;
+        else if (vdo4Score == maxScore && vdo4Score > kayabaScore && vdo4Score > bosch4Score)
+            _currentMap = EepromMap.Maps.IMMO4_VDO;
+        else if (kayabaScore == maxScore && kayabaScore > vdoScore && kayabaScore > motorolaScore)
+            _currentMap = EepromMap.Maps.IMMO4_KAYABA;
+        else if (motorolaScore == maxScore && motorolaScore > vdoScore)
+            _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
+        else if (necScore == maxScore && necScore > vdoScore)
+            _currentMap = EepromMap.Maps.IMMO3_NEC;
+        else
+            _currentMap = EepromMap.Maps.IMMO3_VDO;
         
-        _operationLog.Add($"Автоопределен тип IMMO: {_currentMap.Name}");
+        _operationLog.Add($"Автоопределен тип IMMO: {_currentMap.Name} (score: VDO={vdoScore}, Moto={motorolaScore}, NEC={necScore}, Kayaba={kayabaScore}, VDO4={vdo4Score}, Bosch4={bosch4Score})");
     }
     
     /// <summary>
