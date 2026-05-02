@@ -64,7 +64,7 @@ public static class BcdCodec
         string digits = new string(Array.FindAll(value.ToCharArray(), char.IsDigit));
         
         byte[] result = new byte[byteLength];
-        Array.Fill(result, 0xFF); // Заполняем 0xFF как padding
+        Array.Fill<byte>(result, 0xFF); // Заполняем 0xFF как padding
         
         int digitIndex = digits.Length - 1;
         for (int i = byteLength - 1; i >= 0 && digitIndex >= 0; i--)
@@ -127,7 +127,7 @@ public static class AsciiCodec
             throw new ArgumentException("Value cannot be null or empty", nameof(value));
         
         byte[] result = new byte[length];
-        Array.Fill(result, 0x00); // Заполняем нулями
+        Array.Fill<byte>(result, 0x00); // Заполняем нулями
         
         byte[] encoded = Encoding.ASCII.GetBytes(value);
         int copyLength = Math.Min(encoded.Length, length);
