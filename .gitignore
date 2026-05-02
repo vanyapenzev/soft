@@ -1,1 +1,23 @@
-5
+```
+# Build results
+bin/
+obj/
+out/
+
+# User-specific files
+.vs/
+.userprefs
+
+# IDE - VS Code
+.vscode/
+
+# Dependencies
+packages/
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```
