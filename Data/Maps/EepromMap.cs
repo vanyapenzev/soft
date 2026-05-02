@@ -13,7 +13,9 @@ public enum ImmoType
     IMMO3_Motorola = 3,
     IMMO3_NEC = 4,
     IMMO4_Kayaba = 5,
-    IMMO4_Denso = 6
+    IMMO4_Denso = 6,
+    IMMO4_VDO = 7,
+    IMMO4_Bosch = 8
 }
 
 /// <summary>
@@ -115,13 +117,57 @@ public record EepromMap(
             MileageMultiplier: 1
         );
 
+        /// <summary>
+        /// IMMO4 VDO - приборные панели VDO для VAG с 2003+ годов
+        /// EEPROM 24LC64 (8KB), CRC16 CCITT
+        /// </summary>
+        public static readonly EepromMap IMMO4_VDO = new(
+            Type: ImmoType.IMMO4_VDO,
+            Name: "IMMO4 VDO",
+            PinOffset: 0x280,
+            PinLength: 7,
+            MileageOffset: 0x270,
+            MileageLength: 4,
+            VinOffset: 0x250,
+            VinLength: 17,
+            CrcOffset: 0x2FE,
+            CrcLength: 2,
+            CryptoOffset: 0x400,
+            CryptoLength: 512,
+            IsBigEndian: false,
+            MileageMultiplier: 1
+        );
+
+        /// <summary>
+        /// IMMO4 Bosch - приборные панели Bosch для VAG
+        /// EEPROM 24LC64 (8KB), CRC16 Motorola
+        /// </summary>
+        public static readonly EepromMap IMMO4_BOSCH = new(
+            Type: ImmoType.IMMO4_Bosch,
+            Name: "IMMO4 Bosch",
+            PinOffset: 0x290,
+            PinLength: 7,
+            MileageOffset: 0x280,
+            MileageLength: 4,
+            VinOffset: 0x260,
+            VinLength: 17,
+            CrcOffset: 0x2FF,
+            CrcLength: 2,
+            CryptoOffset: 0x450,
+            CryptoLength: 512,
+            IsBigEndian: true,
+            MileageMultiplier: 1
+        );
+
         public static EepromMap[] AllMaps => new[]
         {
             IMMO2,
             IMMO3_VDO,
             IMMO3_MOTOROLA,
             IMMO3_NEC,
-            IMMO4_KAYABA
+            IMMO4_KAYABA,
+            IMMO4_VDO,
+            IMMO4_BOSCH
         };
     }
 }

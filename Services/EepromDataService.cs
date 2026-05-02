@@ -270,6 +270,7 @@ public class EepromDataService
             {
                 case ImmoType.IMMO3_Motorola:
                 case ImmoType.IMMO4_Kayaba:
+                case ImmoType.IMMO4_Bosch:
                     calculatedCrc = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
                     break;
                 default:
@@ -306,6 +307,7 @@ public class EepromDataService
         {
             case ImmoType.IMMO3_Motorola:
             case ImmoType.IMMO4_Kayaba:
+            case ImmoType.IMMO4_Bosch:
                 newCrcNullable = CrcCalculator.CalculateCrc16Motorola(_data, 0, crcDataLength);
                 break;
             default:
@@ -354,15 +356,23 @@ public class EepromDataService
         
         // IMMO4: данные в области 0x200+, пробег в 0x1F0
         bool hasKayabaPattern = IsDataPresent(0x200, 7) && IsDataPresent(0x1F0, 4);
+        
+        // IMMO4 VDO: данные в области 0x280+, пробег в 0x270
+        bool hasVdo4Pattern = IsDataPresent(0x280, 7) && IsDataPresent(0x270, 4);
+        
+        // IMMO4 Bosch: данные в области 0x290+, пробег в 0x280
+        bool hasBosch4Pattern = IsDataPresent(0x290, 7) && IsDataPresent(0x280, 4);
 
         // Подсчитываем количество совпадений для более точного определения
         int vdoScore = (hasVdoPattern ? 2 : 0) + (IsDataPresent(0x1B0, 17) ? 1 : 0);
         int motorolaScore = (hasMotorolaPattern ? 2 : 0) + (IsDataPresent(0x1A0, 17) ? 1 : 0);
         int necScore = (hasNecPattern ? 2 : 0) + (IsDataPresent(0x1B8, 17) ? 1 : 0);
         int kayabaScore = (hasKayabaPattern ? 2 : 0) + (IsDataPresent(0x1D0, 17) ? 1 : 0);
+        int vdo4Score = (hasVdo4Pattern ? 2 : 0) + (IsDataPresent(0x250, 17) ? 1 : 0);
+        int bosch4Score = (hasBosch4Pattern ? 2 : 0) + (IsDataPresent(0x260, 17) ? 1 : 0);
 
         // Выбираем тип с наибольшим score
-        int maxScore = Math.Max(Math.Max(vdoScore, motorolaScore), Math.Max(necScore, kayabaScore));
+        int maxScore = Math.Max(Math.Max(Math.Max(vdoScore, motorolaScore), Math.Max(necScore, kayabaScore)), Math.Max(vdo4Score, bosch4Score));
         
         if (maxScore == 0)
         {
@@ -371,11 +381,19 @@ public class EepromDataService
                 _currentMap = EepromMap.Maps.IMMO3_VDO;
             else if (_data[0x1F0] != 0x00 && _data[0x1F0] != 0xFF)
                 _currentMap = EepromMap.Maps.IMMO3_MOTOROLA;
+            else if (_data[0x290] != 0x00 && _data[0x290] != 0xFF)
+                _currentMap = EepromMap.Maps.IMMO4_BOSCH;
+            else if (_data[0x280] != 0x00 && _data[0x280] != 0xFF)
+                _currentMap = EepromMap.Maps.IMMO4_VDO;
             else if (_data[0x200] != 0x00 && _data[0x200] != 0xFF)
                 _currentMap = EepromMap.Maps.IMMO4_KAYABA;
             else
                 _currentMap = EepromMap.Maps.IMMO3_VDO; // Default
         }
+        else if (bosch4Score == maxScore && bosch4Score > kayabaScore && bosch4Score > vdo4Score)
+            _currentMap = EepromMap.Maps.IMMO4_BOSCH;
+        else if (vdo4Score == maxScore && vdo4Score > kayabaScore && vdo4Score > bosch4Score)
+            _currentMap = EepromMap.Maps.IMMO4_VDO;
         else if (kayabaScore == maxScore && kayabaScore > vdoScore && kayabaScore > motorolaScore)
             _currentMap = EepromMap.Maps.IMMO4_KAYABA;
         else if (motorolaScore == maxScore && motorolaScore > vdoScore)
@@ -385,7 +403,7 @@ public class EepromDataService
         else
             _currentMap = EepromMap.Maps.IMMO3_VDO;
         
-        _operationLog.Add($"Автоопределен тип IMMO: {_currentMap.Name} (score: VDO={vdoScore}, Moto={motorolaScore}, NEC={necScore}, Kayaba={kayabaScore})");
+        _operationLog.Add($"Автоопределен тип IMMO: {_currentMap.Name} (score: VDO={vdoScore}, Moto={motorolaScore}, NEC={necScore}, Kayaba={kayabaScore}, VDO4={vdo4Score}, Bosch4={bosch4Score})");
     }
     
     /// <summary>

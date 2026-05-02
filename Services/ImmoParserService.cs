@@ -22,6 +22,8 @@ public class ImmoParserService
         { ImmoType.IMMO3_Motorola, new[] { 0x1F0, 0x1C0, 0x1A0 } },
         { ImmoType.IMMO3_NEC, new[] { 0x1E8, 0x1D8, 0x1B8 } },
         { ImmoType.IMMO4_Kayaba, new[] { 0x200, 0x1F0, 0x1D0 } },
+        { ImmoType.IMMO4_VDO, new[] { 0x280, 0x270, 0x250 } },
+        { ImmoType.IMMO4_Bosch, new[] { 0x290, 0x280, 0x260 } },
         { ImmoType.IMMO2, new[] { 0x0F0, 0x0E0, 0x0C0 } }
     };
 
@@ -46,6 +48,10 @@ public class ImmoParserService
         // Парсим ключи
         List<KeyInfo>? keys = ParseKeys(data, map);
         
+        // Обработка null для keys
+        if (keys == null)
+            keys = new List<KeyInfo>();
+        
         // Проверяем CRC
         ushort? storedCrc = null;
         ushort? calculatedCrc = null;
@@ -66,7 +72,7 @@ public class ImmoParserService
                 int crcDataLength = map.CrcOffset;
                 ushort? calculatedCrcValue = map.Type switch
                 {
-                    ImmoType.IMMO3_Motorola or ImmoType.IMMO4_Kayaba 
+                    ImmoType.IMMO3_Motorola or ImmoType.IMMO4_Kayaba or ImmoType.IMMO4_Bosch
                         => Core.Crc.CrcCalculator.CalculateCrc16Motorola(data, 0, crcDataLength),
                     _ => Core.Crc.CrcCalculator.CalculateCrc16Ccitt(data, 0, crcDataLength)
                 };
@@ -91,7 +97,7 @@ public class ImmoParserService
             CalculatedCrc: calculatedCrc,
             IsCrcValid: isCrcValid,
             Options: options,
-            Keys: keys.Count > 0 ? keys : (List<KeyInfo>?)null
+            Keys: keys.Count > 0 ? keys : null
         );
     }
 
@@ -269,12 +275,14 @@ public class ImmoParserService
             ImmoType.IMMO3_Motorola => 0x190,
             ImmoType.IMMO3_NEC => 0x1A8,
             ImmoType.IMMO4_Kayaba => 0x280,
+            ImmoType.IMMO4_VDO => 0x300,
+            ImmoType.IMMO4_Bosch => 0x310,
             ImmoType.IMMO2 => 0x0A0,
             _ => 0x1A0
         };
         
         if (keyDataOffset + 16 > data.Length)
-            return (List<KeyInfo>?)null;
+            return null;
         
         // Читаем до 4 ключей (каждый ключ занимает 4 байта)
         for (int i = 0; i < 4; i++)
@@ -301,7 +309,7 @@ public class ImmoParserService
             }
         }
         
-        return keys.Count > 0 ? keys : (List<KeyInfo>?)null;
+        return keys.Count > 0 ? keys : null;
     }
     
     /// <summary>
@@ -311,7 +319,7 @@ public class ImmoParserService
     {
         ImmoType.IMMO2 => "ID46 (Crypto)",
         ImmoType.IMMO3_VDO or ImmoType.IMMO3_Motorola or ImmoType.IMMO3_NEC => "ID46 (Crypto)",
-        ImmoType.IMMO4_Kayaba => "ID48",
+        ImmoType.IMMO4_Kayaba or ImmoType.IMMO4_VDO or ImmoType.IMMO4_Bosch => "ID48",
         _ => "Unknown"
     };
 
@@ -328,6 +336,8 @@ public class ImmoParserService
             ImmoType.IMMO3_Motorola => 0x1F9,
             ImmoType.IMMO3_NEC => 0x1F8,
             ImmoType.IMMO4_Kayaba => 0x2F0,
+            ImmoType.IMMO4_VDO => 0x3F0,
+            ImmoType.IMMO4_Bosch => 0x3F8,
             ImmoType.IMMO2 => 0x0F8,
             _ => 0x1F8
         };
