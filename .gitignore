@@ -1,32 +1,23 @@
-# Compiled and build artifacts
-*.obj
-*.exe
+```
+# Build artifacts
+bin/
+obj/
 *.dll
+*.exe
+*.pdb
 *.so
-*.a
-*.o
-*.out
-*.pyc
+*.dylib
 *.class
-*.swp
-*.swo
-*.tmp
 
 # Dependencies
+packages/
 node_modules/
 venv/
 .venv/
 __pycache__/
-.mypy_cache/
-.pytest_cache/
-target/
-.gradle/
+*.egg-info/
 
-# Build directories
-dist/
-build/
-coverage/
-htmlcov/
+# Logs
 *.log
 
 # Environment
@@ -37,34 +28,46 @@ htmlcov/
 # Editors
 .vscode/
 .idea/
+*.swp
+*.swo
+*.tmp
 
-# System
+# OS
 .DS_Store
 Thumbs.db
-.CVS
-*.backup
-*.bak
 
-# Archives
-*.zip
-*.gz
-*.tar
-*.tgz
-*.bz2
-*.xz
-*.7z
-*.rar
-*.zst
-*.lz4
-*.lzh
-*.cab
-*.arj
-*.rpm
-*.deb
-*.Z
-*.lz
-*.lzo
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Distribution / packaging
+dist/
+build/
 *.tar.gz
-*.tar.bz2
-*.tar.xz
-*.tar.zst
+*.whl
+*.zip
+
+# Testing
+*.test.js
+*.spec.js
+
+# Compiled Python
+*.pyc
+*.pyo
+*.pyd
+
+# C#
+*.userprefs
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/settings.json
+
+# Temporary files
+*.tmp
+*.temp
+```

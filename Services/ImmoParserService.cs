@@ -91,7 +91,7 @@ public class ImmoParserService
             CalculatedCrc: calculatedCrc,
             IsCrcValid: isCrcValid,
             Options: options,
-            Keys: keys
+            Keys: keys.Count > 0 ? keys : (List<KeyInfo>?)null
         );
     }
 
@@ -233,7 +233,7 @@ public class ImmoParserService
             }
         }
         
-        return null;
+        return (string?)null;
     }
     
     /// <summary>
@@ -274,7 +274,7 @@ public class ImmoParserService
         };
         
         if (keyDataOffset + 16 > data.Length)
-            return null;
+            return (List<KeyInfo>?)null;
         
         // Читаем до 4 ключей (каждый ключ занимает 4 байта)
         for (int i = 0; i < 4; i++)
@@ -301,7 +301,7 @@ public class ImmoParserService
             }
         }
         
-        return keys.Count > 0 ? keys : null;
+        return keys.Count > 0 ? keys : (List<KeyInfo>?)null;
     }
     
     /// <summary>
