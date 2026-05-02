@@ -1,1 +1,29 @@
-Nothing should be ignored since the changes only include source code files (.cs files) and no build artifacts, dependencies, or temporary files.
+```
+# Build artifacts
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.userprefs
+
+# Dependencies
+packages/
+node_modules/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# User-specific files
+.vs/
+*.user
+*.suo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+```
