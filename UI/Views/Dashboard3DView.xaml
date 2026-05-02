@@ -1,0 +1,172 @@
+<UserControl x:Class="VagImmoEditor.Pro.UI.Views.Dashboard3DView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:helix="http://helix-toolkit.org/wpf"
+             xmlns:local="clr-namespace:VagImmoEditor.Pro.UI.Views"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="900"
+             Background="#1a1a1a">
+    
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Панель управления симуляцией -->
+        <Border Grid.Row="0" Background="#2d2d30" Padding="10" Margin="5">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <Button Content="▶ Запуск" Command="{Binding StartSimulationCommand}" 
+                        Width="100" Margin="5" Style="{StaticResource ModernButton}"/>
+                <Button Content="⏹ Стоп" Command="{Binding StopSimulationCommand}" 
+                        Width="100" Margin="5" Style="{StaticResource ModernButton}"/>
+                
+                <Separator Width="20" Background="Transparent"/>
+                
+                <TextBlock Text="Сценарий:" VerticalAlignment="Center" Foreground="White" Margin="10,0"/>
+                <ComboBox ItemsSource="{Binding AvailableScenarios}" 
+                          SelectedItem="{Binding SelectedScenario}"
+                          DisplayMemberPath="Name"
+                          Width="200" Margin="5"/>
+                
+                <Separator Width="20" Background="Transparent"/>
+                
+                <TextBlock Text="Тип дисплея:" VerticalAlignment="Center" Foreground="White" Margin="10,0"/>
+                <ComboBox ItemsSource="{Binding DisplayTypes}" 
+                          SelectedItem="{Binding SelectedDisplayType}"
+                          Width="150" Margin="5"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 3D Viewport с приборной панелью -->
+        <Border Grid.Row="1" BorderBrush="#3e3e42" BorderThickness="1" Margin="5">
+            <Grid>
+                <!-- Helix Viewport для 3D рендеринга -->
+                <helix:HelixViewport3D x:Name="DashboardViewport"
+                                       CameraMode="Inspect"
+                                       ShowCoordinateSystem="False"
+                                       ZoomExtentsWhenLoaded="True"
+                                       Background="#0f0f0f">
+                    
+                    <!-- Освещение -->
+                    <helix:DefaultLights/>
+                    <helix:AmbientLight Color="#404040"/>
+                    
+                    <!-- Камера -->
+                    <PerspectiveCamera x:Name="MainCamera"
+                                       Position="0,0,800"
+                                       LookDirection="0,0,-1"
+                                       UpDirection="0,1,0"
+                                       FieldOfView="45"/>
+
+                    <!-- Группа приборной панели -->
+                    <ModelVisual3D x:Name="DashboardModel">
+                        <!-- Корпус приборной панели -->
+                        <helix:CubeVisual3D Center="0,0,0"
+                                            Size="700,400,50"
+                                            Fill="#2a2a2a"
+                                            BackFacesVisible="True"/>
+                        
+                        <!-- Рамка дисплея -->
+                        <helix:CubeVisual3D Center="0,50,30"
+                                            Size="300,150,10"
+                                            Fill="#1a1a1a"/>
+                        
+                        <!-- Спидометр (левый круг) -->
+                        <helix:DiscVisual3D Center="-150,-50,30"
+                                            Radius="120"
+                                            InnerRadius="0"
+                                            Theta="360"
+                                            Fill="#0a0a0a"
+                                            Normal="0,0,1"/>
+                        
+                        <!-- Тахометр (правый круг) -->
+                        <helix:DiscVisual3D Center="150,-50,30"
+                                            Radius="120"
+                                            InnerRadius="0"
+                                            Theta="360"
+                                            Fill="#0a0a0a"
+                                            Normal="0,0,1"/>
+                        
+                        <!-- Дисплей (центр) -->
+                        <helix:RectangleVisual3D Origin="-100,50,35"
+                                                 Width="200"
+                                                 Height="100"
+                                                 Fill="#001a33"
+                                                 Normal="0,0,1"/>
+                        
+                        <!-- Стрелка спидометра -->
+                        <helix:ArrowVisual3D x:Name="SpeedNeedle"
+                                             Point1="-150,-50,35"
+                                             Point2="-150,50,35"
+                                             Diameter="2"
+                                             HeadDiameter="8"
+                                             HeadLength="15"
+                                             Fill="#ff3300"/>
+                        
+                        <!-- Стрелка тахометра -->
+                        <helix:ArrowVisual3D x:Name="RpmNeedle"
+                                             Point1="150,-50,35"
+                                             Point2="150,50,35"
+                                             Diameter="2"
+                                             HeadDiameter="8"
+                                             HeadLength="15"
+                                             Fill="#ff3300"/>
+                    </ModelVisual3D>
+                </helix:HelixViewport3D>
+
+                <!-- Оверлей с информацией -->
+                <Border Background="#80000000" 
+                        HorizontalAlignment="Left" 
+                        VerticalAlignment="Top"
+                        Margin="10"
+                        Padding="10"
+                        CornerRadius="5">
+                    <StackPanel>
+                        <TextBlock Text="{Binding SimulationStatus}" 
+                                   Foreground="White" 
+                                   FontSize="14"
+                                   FontWeight="Bold"/>
+                        <TextBlock Text="{Binding CurrentMileage, StringFormat='Пробег: {0:F0} км'}" 
+                                   Foreground="#aaaaaa" 
+                                   FontSize="12"
+                                   Margin="0,5,0,0"/>
+                        <TextBlock Text="{Binding CurrentPin, StringFormat='PIN: {0}'}" 
+                                   Foreground="#aaaaaa" 
+                                   FontSize="12"/>
+                        <TextBlock Text="{Binding ImmoType, StringFormat='Тип: {0}'}" 
+                                   Foreground="#aaaaaa" 
+                                   FontSize="12"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Панель предупреждений и ламп -->
+        <Border Grid.Row="2" Background="#2d2d30" Padding="10" Margin="5">
+            <ItemsControl ItemsSource="{Binding ActiveWarnings}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel HorizontalAlignment="Center"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="#ff3300" 
+                                CornerRadius="3" 
+                                Padding="10,5"
+                                Margin="5"
+                                Visibility="{Binding IsOn, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="{Binding Name}" 
+                                       Foreground="White" 
+                                       FontWeight="Bold"/>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </Border>
+    </Grid>
+</UserControl>
