@@ -2,6 +2,7 @@ namespace App.Crypto;
 
 using App.Models;
 using App.Core;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для расшифровки данных иммобилайзера VDO/Continental IMMO4
@@ -49,8 +50,11 @@ public class DecryptedImmoData
 /// </summary>
 public class VdoNecCryptoService : IImmoCryptoService
 {
-    public VdoNecCryptoService()
+    private readonly ILogger<VdoNecCryptoService>? _logger;
+
+    public VdoNecCryptoService(ILogger<VdoNecCryptoService>? logger = null)
     {
+        _logger = logger;
     }
 
     /// <summary>

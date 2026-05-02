@@ -1,14 +1,18 @@
 namespace App.Core;
 
 using App.Models;
+using Microsoft.Extensions.Logging;
 
 /// <summary>
 /// Сервис для парсинга данных из дампа EEPROM
 /// </summary>
 public class DataParserService
 {
-    public DataParserService()
+    private readonly ILogger<DataParserService>? _logger;
+
+    public DataParserService(ILogger<DataParserService>? logger = null)
     {
+        _logger = logger;
     }
 
     /// <summary>

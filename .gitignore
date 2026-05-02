@@ -1,47 +1,73 @@
-```gitignore
-# Build artifacts
-bin/
-obj/
+```
+# Compiled and build artifacts
+*.o
+*.obj
 *.exe
 *.dll
-*.pdb
-*.userprefs
-*.cache
-*.log
+*.so
+*.a
+*.out
+*.pyc
+*.class
 
 # Dependencies
-packages/
 node_modules/
-.nuget/
-.nyc_output/
-coverage/
+venv/
+.venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+target/
+.gradle/
 
-# Editors
-.vs/
-*.user
-*.suo
-.vscode/
-.idea/
+# Build directories
+dist/
+build/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
 
 # Environment
 .env
 .env.local
-.env.*
-!*.env.example
+*.env.*
 
-# OS generated files
+# Editors
+.vscode/
+.idea/
+
+# System files
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Temporary files
-*.tmp
-*.temp
-*~
-```
+# Coverage
+coverage/
+htmlcov/
+.coverage
 
-Wait, let me reconsider. The modified files are only C# source files (.cs) and XAML code-behind files, which are source code. No build artifacts, dependency directories, or temporary files were listed in the changes. According to rule #6, if the changes contain only source/config files and no build artifacts, dependencies, or temp files, I should output an empty .gitignore.
-
-```gitignore
-
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
 ```
