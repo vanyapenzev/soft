@@ -5,9 +5,9 @@ using System.Text;
 using System.Windows;
 using Microsoft.Win32;
 using Microsoft.Extensions.Logging;
-using App.Core;
-using App.Models;
-using App.Crypto;
+using AppCore = App.Core;
+using AppModels = App.Models;
+using AppCrypto = App.Crypto;
 
 /// <summary>
 /// Главное окно приложения VAG EEPROM Editor
@@ -15,15 +15,15 @@ using App.Crypto;
 public partial class MainWindow : Window
 {
     // Сервисы
-    private readonly DumpLoaderService _dumpLoader;
-    private readonly DataParserService _dataParser;
-    private readonly EditCommandService _editCommandService;
-    private readonly VdoCrcCalculator _crcCalculator;
-    private readonly VdoNecCryptoService _cryptoService;
+    private readonly AppCore.DumpLoaderService _dumpLoader;
+    private readonly AppCore.DataParserService _dataParser;
+    private readonly AppCore.EditCommandService _editCommandService;
+    private readonly AppCore.VdoCrcCalculator _crcCalculator;
+    private readonly AppCrypto.VdoNecCryptoService _cryptoService;
 
     // Текущие данные
     private byte[]? _currentDump;
-    private DashboardData? _currentData;
+    private AppModels.DashboardData? _currentData;
     private bool _isModified;
 
     public MainWindow()
@@ -246,7 +246,7 @@ public partial class MainWindow : Window
     /// <summary>
     /// Обновление полей данными из дампа
     /// </summary>
-    private void UpdateUiWithData(DashboardData data, DashboardIdentificationResult identification)
+    private void UpdateUiWithData(AppModels.DashboardData data, AppCore.DashboardIdentificationResult identification)
     {
         TxtPartNumber.Text = data.PartNumber ?? "Не найден";
         TxtHwVersion.Text = data.HardwareVersion ?? "-";
